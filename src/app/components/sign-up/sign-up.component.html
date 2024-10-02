@@ -1,0 +1,83 @@
+<div class="auth-container">
+    <div class="auth-form">
+      <h2>Create an Account</h2>
+      
+      <form (ngSubmit)="onSubmit()" #signupForm="ngForm">
+        <!-- Name Input -->
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input 
+            type="text" 
+            id="name" 
+            required 
+            [(ngModel)]="name" 
+            name="name" 
+            #nameInput="ngModel" 
+            [ngClass]="{'invalid': nameInput.invalid && nameInput.touched}" 
+          />
+          <div *ngIf="nameInput.invalid && nameInput.touched" class="error-message">
+            Please enter your name.
+          </div>
+        </div>
+  
+        <!-- Email Input -->
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            required 
+            [(ngModel)]="email" 
+            name="email" 
+            #emailInput="ngModel" 
+            [ngClass]="{'invalid': emailInput.invalid && emailInput.touched}" 
+          />
+          <div *ngIf="emailInput.invalid && emailInput.touched" class="error-message">
+            Please enter a valid email.
+          </div>
+        </div>
+        
+        <!-- Password Input -->
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            required 
+            [(ngModel)]="password" 
+            name="password" 
+            #passwordInput="ngModel" 
+            [ngClass]="{'invalid': passwordInput.invalid && passwordInput.touched}" 
+          />
+          <div *ngIf="passwordInput.invalid && passwordInput.touched" class="error-message">
+            Password is required.
+          </div>
+        </div>
+  
+        <!-- Confirm Password Input -->
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            required 
+            [(ngModel)]="confirmPassword" 
+            name="confirmPassword" 
+            #confirmPasswordInput="ngModel" 
+            [ngClass]="{'invalid': confirmPasswordInput.invalid && confirmPasswordInput.touched}" 
+          />
+          <div *ngIf="confirmPassword !== password && confirmPasswordInput.touched" class="error-message">
+            Passwords do not match.
+          </div>
+        </div>
+  
+        <!-- Submit Button -->
+        <button type="submit" [disabled]="signupForm.invalid" class="auth-button">Sign Up</button>
+      </form>
+  
+      <div class="switch-auth">
+        <p>Already have an account? <a routerLink="/sign-in">Login here</a></p>
+      </div>
+    </div>
+  </div>
+  

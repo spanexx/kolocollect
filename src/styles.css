@@ -1,1 +1,177 @@
-/* You can add global styles to this file, and also import other style files */
+/* Reset default paddings, margins, and box-sizing */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Global styles */
+body {
+  font-family: 'Poppins', sans-serif;  /* or 'Mukta', sans-serif */
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;  /* Bold for headings */
+}
+
+p, button {
+  font-family: 'Mukta', sans-serif;
+  font-weight: 400;  /* Regular weight for paragraphs and buttons */
+}
+
+/* Link styles */
+a {
+  text-decoration: none;  /* Remove underline on links */
+  color: inherit;         /* Inherit the color from parent element */
+  font-family: 'Mukta', sans-serif; /* Optional: set a consistent font */
+}
+
+/* Optional: Hover effect for links */
+a:hover {
+  color: #4b5320;          /* Earthy green color for hover state */
+  text-decoration: none;   /* Ensure underline doesn't appear on hover */
+}
+
+/* Auth styles */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f7f7f7;
+
+
+  .auth-form {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;  /* Align form elements to the left */
+    justify-content: center;  /* Center content vertically */
+
+    h2 {
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      width: 350px;
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-family: 'Poppins', sans-serif;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+
+
+        &.invalid {
+          border-color: red;
+        }
+      }
+
+      .error-message {
+        color: red;
+        font-size: 0.85rem;
+        margin-top: 5px;
+      }
+    }
+
+    .auth-button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4b5320;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 10px 0;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #3e4422;
+      }
+
+      &:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+      }
+    }
+
+    .switch-auth {
+      margin-top: 20px;
+      text-align: center;
+
+      a {
+        color: #4b5320;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+}
+
+
+.community-container {
+  padding: 20px 40px;
+  background-color: #f7f7f7;
+  font-family: 'Poppins', sans-serif;
+
+  h1 {
+    font-size: 2.5rem;
+    color: #4b5320;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .cta {
+    padding: 10px 30px;
+    background-color: #ffcc00;
+    color: #000;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: #e6b800;
+    }
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2rem;
+    }
+
+    .cta {
+      padding: 8px 20px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 1.8rem;
+    }
+  }
+}
+

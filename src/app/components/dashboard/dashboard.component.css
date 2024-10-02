@@ -1,0 +1,222 @@
+.dashboard-container {
+    padding: 20px 40px;
+    background-color: #f7f7f7;
+    font-family: 'Poppins', sans-serif;
+  
+    .welcome-section {
+      text-align: center;
+      margin-bottom: 40px;
+  
+      h1 {
+        font-size: 2.5rem;
+        color: #4b5320;
+      }
+  
+      p {
+        font-size: 1.2rem;
+        color: #333;
+      }
+    }
+  
+    .quick-stats {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap; /* Allow cards to wrap on smaller screens */
+      margin-bottom: 40px;
+      margin-right: 40px;
+  
+      .stat-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        flex: 1 1 calc(25% - 20px); /* Ensure cards are 25% width minus margin */
+        margin: 10px; /* Add margin to give space between cards */
+  
+        h3 {
+          font-size: 2rem;
+          color: #4b5320;
+        }
+  
+        p {
+          font-size: 1rem;
+          color: #666;
+        }
+      }
+    }
+  
+    .recent-activity {
+      margin-bottom: 40px;
+  
+      h2 {
+        font-size: 1.8rem;
+        color: #4b5320;
+        margin-bottom: 20px;
+      }
+  
+      ul {
+        list-style: none;
+        padding: 0;
+  
+        li {
+          background-color: white;
+          padding: 10px 20px;
+          margin-bottom: 10px;
+          border-radius: 5px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+  
+    .savings-goals {
+      margin-bottom: 40px;
+  
+      h2 {
+        font-size: 1.8rem;
+        color: #4b5320;
+        margin-bottom: 20px;
+      }
+  
+      .goal {
+        margin-bottom: 20px;
+  
+        p {
+          font-size: 1.2rem;
+          margin-bottom: 5px;
+          color: #333;
+        }
+  
+        .progress-bar {
+          background-color: #eaeaea;
+          border-radius: 5px;
+          height: 20px;
+  
+          .progress {
+            background-color: #4b5320;
+            height: 100%;
+            border-radius: 5px;
+          }
+        }
+      }
+    }
+  
+    .community-overview {
+      margin-bottom: 40px;
+  
+      h2 {
+        font-size: 1.8rem;
+        color: #4b5320;
+        margin-bottom: 20px;
+      }
+  
+      .community-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  
+        h3 {
+          font-size: 1.5rem;
+          color: #4b5320;
+        }
+  
+        p {
+          font-size: 1rem;
+          color: #666;
+        }
+  
+        .view-community {
+          color: #ffcc00;
+          text-decoration: none;
+  
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  
+    .cta-buttons {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 40px;
+  
+      .cta {
+        padding: 15px 30px;
+        background-color: #ffcc00;
+        color: #000;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+  
+        &:hover {
+          background-color: #e6b800;
+        }
+      }
+    }
+  
+    /* Responsive Styles */
+    @media (max-width: 1024px) {
+      .quick-stats {
+        flex-wrap: wrap;
+  
+        .stat-card {
+          flex: 1 1 calc(50% - 20px); /* 50% width for medium screens */
+          margin-bottom: 20px;
+        }
+      }
+    }
+  
+    @media (max-width: 768px) {
+      padding: 20px;
+  
+      .welcome-section h1 {
+        font-size: 2rem;
+      }
+  
+      .quick-stats {
+        flex-direction: column;
+        align-items: center;
+  
+        .stat-card {
+          width: 100%; /* Full width on smaller screens */
+          margin-bottom: 20px;
+        }
+      }
+  
+      .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+  
+        .cta {
+          width: 100%;
+          margin-bottom: 20px;
+        }
+      }
+    }
+  
+    @media (max-width: 480px) {
+      .welcome-section h1 {
+        font-size: 1.8rem;
+      }
+  
+      .quick-stats .stat-card h3 {
+        font-size: 1.5rem;
+      }
+  
+      .recent-activity h2,
+      .savings-goals h2,
+      .community-overview h2 {
+        font-size: 1.5rem;
+      }
+  
+      .community-card h3 {
+        font-size: 1.2rem;
+      }
+    }
+  }
+  

@@ -1,0 +1,54 @@
+@keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .cta-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #4b5320, #7ba352);
+    color: white;
+    text-align: center;
+    opacity: 0;  /* Initially hidden */
+    transition: opacity 1s ease-out, transform 1s ease-out;  /* Add transition for smooth effect */
+    
+    h2 {
+      font-size: 2.5rem;
+      font-family: 'Poppins', sans-serif;
+      margin-bottom: 20px;
+    }
+  
+    p {
+      font-size: 1.2rem;
+      font-family: 'Mukta', sans-serif;
+      margin-bottom: 40px;
+      max-width: 600px;
+    }
+  
+    .cta-button {
+      padding: 15px 40px;
+      background-color: #ffcc00;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      font-size: 1.2rem;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+  
+      &:hover {
+        background-color: #e6b800;
+        transform: translateY(-5px);
+      }
+    }
+  }
+  

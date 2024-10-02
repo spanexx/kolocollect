@@ -1,0 +1,25 @@
+<header class="header-container">
+    <div class="header-top">
+      <div class="logo">
+        <img routerLink="/" src="assets/logo.png" alt="KoloCollect Logo">
+      </div>
+    
+      <!-- Hamburger Icon -->
+      <div class="hamburger" (click)="toggleMenu()">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+    
+    <!-- Navigation Links -->
+  <nav class="nav-links" [ngClass]="{'open': isMenuOpen}">
+    <ul>
+      <li><a routerLink="/" routerLinkActive="active" (click)="closeMenu()">Home</a></li>
+      <li><a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">Profile</a></li>
+      <li><a routerLink="/community-list" routerLinkActive="active" (click)="closeMenu()">Communities</a></li>
+      <li><a routerLink="/about" routerLinkActive="active" (click)="closeMenu()">About</a></li>
+      <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a></li>
+      <li><a routerLink="/sign-in" class="cta-button" (click)="closeMenu()">Login</a></li>
+    </ul>
+  </nav>
+  </header>
+  

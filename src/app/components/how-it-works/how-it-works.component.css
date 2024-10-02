@@ -1,0 +1,60 @@
+.how-it-works-container {
+    text-align: center;
+    padding: 50px 20px;
+    /* background-color: #f7f7f7;  Light background to distinguish from other sections */
+  
+    h2 {
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+      color: #4b5320;  /* Earthy green for headings */
+      font-family: 'Poppins', sans-serif;
+    }
+  
+    .steps {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+  
+      @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: center;
+        margin: 0 auto;
+      }
+  
+      .step {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        max-width: 300px;
+        text-align: center;
+        transition: transform 0.3s ease;
+        margin: 0 0 20px;  /* Adding margin below each card */
+  
+        &:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+  
+        .step-icon {
+          font-size: 3rem;
+          color: #4b5320;
+          margin-bottom: 20px;
+        }
+  
+        h3 {
+          font-family: 'Poppins', sans-serif;
+          font-size: 1.5rem;
+          margin-bottom: 10px;
+          color: #4b5320;
+        }
+  
+        p {
+          font-family: 'Mukta', sans-serif;
+          font-size: 1rem;
+          color: #666;
+        }
+      }
+    }
+  }
+  
