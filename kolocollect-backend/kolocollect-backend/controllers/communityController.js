@@ -21,12 +21,26 @@ exports.getCommunityById = async (req, res) => {
   }
 };
 
+
+
 // Create a new community
 exports.createCommunity = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const newCommunity = new Community({ name, description });
+    const { name, description, membersList, contributions, nextPayout } = req.body;
+    
+// Create a new community with the provided data and calculate members count
+    const newCommunity = new Community({
+      name,
+      description,
+      membersList,
+      contributions,
+      nextPayout,
+      members: membersList.length // Automatically set the number of members based on the membersList length
+    });
+    
+    // Save the new community to the database
     await newCommunity.save();
+
     res.status(201).json(newCommunity);
   } catch (err) {
     res.status(500).json({ error: err.message });
