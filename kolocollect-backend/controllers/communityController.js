@@ -21,27 +21,45 @@ exports.getCommunityById = async (req, res) => {
   }
 };
 
-
-
 // Create a new community
 exports.createCommunity = async (req, res) => {
   try {
     const { name, description, membersList, contributions, nextPayout } = req.body;
-    
-// Create a new community with the provided data and calculate members count
     const newCommunity = new Community({
       name,
       description,
       membersList,
       contributions,
       nextPayout,
-      members: membersList.length // Automatically set the number of members based on the membersList length
+      members: membersList.length
     });
-    
-    // Save the new community to the database
-    await newCommunity.save();
 
+    await newCommunity.save();
     res.status(201).json(newCommunity);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update a community
+exports.updateCommunity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedCommunity = await Community.findByIdAndUpdate(id, req.body, { new: true });
+    if (!updatedCommunity) return res.status(404).json({ message: "Community not found" });
+    res.json(updatedCommunity);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete a community
+exports.deleteCommunity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const community = await Community.findByIdAndDelete(id);
+    if (!community) return res.status(404).json({ message: "Community not found" });
+    res.json({ message: "Community deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
