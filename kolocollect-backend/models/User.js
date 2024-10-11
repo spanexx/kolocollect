@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Create a schema for User
 const userSchema = new mongoose.Schema({
@@ -36,7 +36,7 @@ userSchema.pre('save', async function (next) {
   
   try {
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = await bcrypt.hashSync(this.password, salt);
     next();
   } catch (error) {
     next(error);
