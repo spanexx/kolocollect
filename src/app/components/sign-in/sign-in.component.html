@@ -1,6 +1,6 @@
 <div class="auth-container">
   <h2 class="auth-title">Sign In</h2>
-  <form [formGroup]="signInForm" (ngSubmit)="onSubmit()" class="auth-form">
+  <form [formGroup]="signInForm" (ngSubmit)="onSubmit(signInForm)" class="auth-form">
     <div class="form-group">
       <label for="email">Email</label>
       <input id="email" type="email" formControlName="email" class="form-control">

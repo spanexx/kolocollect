@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { UserService } from '../../services/user.service';
 
 @Component({
@@ -14,22 +14,30 @@ import { UserService } from '../../services/user.service';
 export class SignInComponent {
   signInForm: FormGroup;
 
-  constructor(private fb: FormBuilder, private userService: UserService) {
+  constructor(private fb: FormBuilder, private userService: UserService, private router: Router) {
     this.signInForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
-  onSubmit(): void {
-    if (this.signInForm.valid) {
-      this.userService.login(this.signInForm.value).subscribe(
+  onSubmit(signInForm: any): void {
+    if (signInForm.valid) {
+      this.userService.login(signInForm.value).subscribe(
         (response) => {
           console.log('Login successful', response);
-          localStorage.setItem('token', response.token); // Store the JWT token
+
+          // Check if there's a stored redirect URL
+          const redirectUrl = localStorage.getItem('redirectUrl');
+          if (redirectUrl) {
+            localStorage.removeItem('redirectUrl');  // Clear it once used
+            this.router.navigate([redirectUrl]);  // Navigate to saved URL
+          } else {
+            this.router.navigate(['/dashboard']);  // Default navigation
+          }
         },
         (error) => {
-          console.error('Error during login', error);
+          console.error('Login failed', error);
         }
       );
     }

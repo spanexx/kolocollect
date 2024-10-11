@@ -9,18 +9,17 @@ import { LatestComponent } from './components/latest/latest.component';
 import { CommunityListComponent } from './components/community-list/community-list.component';
 import { CommunityDetailComponent } from './components/community-detail/community-detail.component';
 import { SignUpComponent } from './components/sign-up/sign-up.component';
+import { authGuard } from './services/auth.guard';  // Import the functional auth guard
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
-  { path: 'join-community', component: JoinCommunityComponent },
-  { path: 'contribute', component: ContributeComponent },
-  { path: 'receive-payout', component: ReceivePayoutComponent },
-  {path: 'sign-in', component: SignInComponent},
-  {path: 'sign-up', component: SignUpComponent},
-  {path: 'dashboard', component: DashboardComponent},
-  {path: 'latest', component: LatestComponent},
-  {path: 'community-list', component: CommunityListComponent},
-  {path: 'community/:id', component: CommunityDetailComponent},
-
-
+  { path: 'join-community', component: JoinCommunityComponent, canActivate: [authGuard] },
+  { path: 'contribute', component: ContributeComponent, canActivate: [authGuard] }, // Protected route
+  { path: 'receive-payout', component: ReceivePayoutComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'sign-in', component: SignInComponent },
+  { path: 'sign-up', component: SignUpComponent },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'latest', component: LatestComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'community-list', component: CommunityListComponent },
+  { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  // Protected route
 ];

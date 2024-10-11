@@ -26,6 +26,7 @@ a {
   text-decoration: none;  /* Remove underline on links */
   color: inherit;         /* Inherit the color from parent element */
   font-family: 'Mukta', sans-serif; /* Optional: set a consistent font */
+  cursor: pointer;
 }
 
 /* Optional: Hover effect for links */
@@ -105,6 +106,7 @@ a:hover {
 .auth-container p.auth-switch a:hover {
   text-decoration: underline;
 }
+
 
 
 .community-container {
