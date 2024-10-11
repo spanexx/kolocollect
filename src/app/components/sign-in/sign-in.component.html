@@ -1,49 +1,18 @@
 <div class="auth-container">
-    <div class="auth-form">
-      <h2>Login to Your Account</h2>
-      
-      <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-        <!-- Email Input -->
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            required 
-            [(ngModel)]="email" 
-            name="email" 
-            #emailInput="ngModel" 
-            [ngClass]="{'invalid': emailInput.invalid && emailInput.touched}" 
-          />
-          <div *ngIf="emailInput.invalid && emailInput.touched" class="error-message">
-            Please enter a valid email.
-          </div>
-        </div>
-        
-        <!-- Password Input -->
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input 
-            type="password" 
-            id="password" 
-            required 
-            [(ngModel)]="password" 
-            name="password" 
-            #passwordInput="ngModel" 
-            [ngClass]="{'invalid': passwordInput.invalid && passwordInput.touched}" 
-          />
-          <div *ngIf="passwordInput.invalid && passwordInput.touched" class="error-message">
-            Password is required.
-          </div>
-        </div>
-  
-        <!-- Submit Button -->
-        <button routerLink="/dashboard" type="submit" [disabled]="loginForm.invalid" class="auth-button">Login</button>
-      </form>
-  
-      <div class="switch-auth">
-        <p>Don't have an account? <a routerLink="/sign-up">Sign up here</a></p>
-      </div>
+  <h2 class="auth-title">Sign In</h2>
+  <form [formGroup]="signInForm" (ngSubmit)="onSubmit()" class="auth-form">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" class="form-control">
     </div>
-  </div>
-  
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input id="password" type="password" formControlName="password" class="form-control">
+    </div>
+
+    <button type="submit" class="auth-btn">Sign In</button>
+  </form>
+
+  <p class="auth-switch">Don't have an account? <a routerLink="/sign-up">Sign Up</a></p>
+</div>

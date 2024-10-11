@@ -4,11 +4,11 @@ import { JoinCommunityComponent } from './pages/join-community/join-community.co
 import { ContributeComponent } from './pages/contribute/contribute.component';
 import { ReceivePayoutComponent } from './pages/receive-payout/receive-payout.component';
 import { SignInComponent } from './components/sign-in/sign-in.component';
-import { SignUpComponent } from './components/sign-up/sign-up.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { LatestComponent } from './components/latest/latest.component';
 import { CommunityListComponent } from './components/community-list/community-list.component';
 import { CommunityDetailComponent } from './components/community-detail/community-detail.component';
+import { SignUpComponent } from './components/sign-up/sign-up.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
