@@ -1,12 +1,18 @@
 const mongoose = require('mongoose');
 
-const CommunitySchema = new mongoose.Schema({
+const communitySchema = new mongoose.Schema({
   name: { type: String, required: true },
-  description: { type: String, required: true },
-  members: { type: Number, default: 0 }, // This should default or auto-update
-  contributions: { type: Number, default: 0 }, 
+  description: { type: String },
+  contributions: { type: Number, default: 0 },
   nextPayout: { type: Date },
-  membersList: [{ name: String }],
+  members: { type: Number, default: 0 },
+  // Store an array of user objects
+  membersList: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    name: { type: String, required: true },
+    email: { type: String, required: true }
+  }]
 });
 
-module.exports = mongoose.model('Community', CommunitySchema);
+const Community = mongoose.model('Community', communitySchema);
+module.exports = Community;

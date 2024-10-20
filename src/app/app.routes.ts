@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { HomepageComponent } from './homepage/homepage.component';
-import { JoinCommunityComponent } from './pages/join-community/join-community.component';
 import { ContributeComponent } from './pages/contribute/contribute.component';
 import { ReceivePayoutComponent } from './pages/receive-payout/receive-payout.component';
 import { SignInComponent } from './components/sign-in/sign-in.component';
@@ -10,6 +9,7 @@ import { CommunityListComponent } from './components/community-list/community-li
 import { CommunityDetailComponent } from './components/community-detail/community-detail.component';
 import { SignUpComponent } from './components/sign-up/sign-up.component';
 import { authGuard } from './services/auth.guard';  // Import the functional auth guard
+import { JoinCommunityComponent } from './components/join-community/join-community.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },

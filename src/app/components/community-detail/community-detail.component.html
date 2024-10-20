@@ -1,32 +1,30 @@
-<!-- community detail -->
-
 <div class="community-details-container">
-    <h1>{{community.name}}</h1>
-  
-    <p>{{community.description}}</p>
-  
-    <div class="community-stats">
-      <div class="stat-card">
-        <h3>Total Members</h3>
-        <p>{{community.members}}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Total Contributions</h3>
-        <p>{{community.contributions | currency}}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Next Payout</h3>
-        <p>{{community.nextPayout | date}}</p>
-      </div>
+  <h1>{{community?.name}}</h1>
+  <p><strong>Community ID:</strong> {{community?._id}}</p>
+  <p>{{community?.description}}</p>
+
+
+  <div class="community-stats">
+    <div class="stat-card">
+      <h3>Total Members</h3>
+      <p>{{community?.members}}</p>
     </div>
-  
-    <div class="community-members">
-      <h2>Members</h2>
-      <ul>
-        <li *ngFor="let member of community.membersList">{{member.name}}</li>
-      </ul>
+    <div class="stat-card">
+      <h3>Total Contributions</h3>
+      <p>{{community?.contributions | currency}}</p>
     </div>
-  
-    <button class="cta" [routerLink]="['/join-community', community.id]">Join Community</button>
+    <div class="stat-card">
+      <h3>Next Payout</h3>
+      <p>{{community?.nextPayout | date}}</p>
+    </div>
   </div>
-  
+
+  <div class="community-members">
+    <h2>Members</h2>
+    <ul>
+      <li *ngFor="let member of community?.membersList">{{member.name}}</li>
+    </ul>
+  </div>
+
+<button class="cta" (click)="joinCommunity()">Join Community</button>
+</div>

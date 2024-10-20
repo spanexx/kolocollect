@@ -19,7 +19,9 @@
 
       <!-- Conditionally show Login or Logout -->
       <li *ngIf="!isLoggedIn()"><a routerLink="/sign-in" class="cta-button" (click)="closeMenu()">Login</a></li>
+      <div (click)="closeMenu()">
       <li *ngIf="isLoggedIn()"><a class="cta-button" (click)="logout()">Logout</a></li>
+    </div>
     </ul>
   </nav>
 </header>

@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -14,7 +15,7 @@ styleUrls: ['./header.component.css']
 export class HeaderComponent {
   isMenuOpen = false;
 
-  constructor(private userService: UserService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   toggleMenu() {
     this.isMenuOpen = !this.isMenuOpen;
@@ -26,12 +27,12 @@ export class HeaderComponent {
 
   // Check if the user is logged in
   isLoggedIn(): boolean {
-    return this.userService.isAuthenticated();
+    return this.authService.isLoggedIn();
   }
 
   // Logout the user
   logout() {
-    this.userService.logout();
+    this.authService.logout();
     this.router.navigate(['/sign-in']);
     this.closeMenu();
   }

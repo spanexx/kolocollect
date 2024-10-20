@@ -40,6 +40,17 @@
         }
       }
     }
+
+    .community-details-container p {
+      font-size: 1.2rem;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    .community-details-container p strong {
+      color: #333;
+    }
+    
   
     .community-members {
       margin-top: 30px;
