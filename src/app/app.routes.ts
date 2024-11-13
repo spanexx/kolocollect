@@ -10,9 +10,12 @@ import { CommunityDetailComponent } from './components/community-detail/communit
 import { SignUpComponent } from './components/sign-up/sign-up.component';
 import { authGuard } from './services/auth.guard';  // Import the functional auth guard
 import { JoinCommunityComponent } from './components/join-community/join-community.component';
+import { AboutComponent } from './components/about/about.component';
+import { CreateCommunityComponent } from './components/create-community/create-community.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
+  { path: 'about', component: AboutComponent },
   { path: 'join-community', component: JoinCommunityComponent, canActivate: [authGuard] },
   { path: 'contribute', component: ContributeComponent, canActivate: [authGuard] }, // Protected route
   { path: 'receive-payout', component: ReceivePayoutComponent, canActivate: [authGuard] },  // Protected route
@@ -20,6 +23,7 @@ export const routes: Routes = [
   { path: 'sign-up', component: SignUpComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },  // Protected route
   { path: 'latest', component: LatestComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'create-community', component: CreateCommunityComponent, canActivate: [authGuard] },  // Protected route
   { path: 'community-list', component: CommunityListComponent },
   { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  // Protected route
 ];

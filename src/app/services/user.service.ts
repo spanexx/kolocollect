@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { LoginResponse } from './../models/Login';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'http://localhost:5000/api/users';  
+  private apiUrl = `${environment.apiUrl}/api/users`;  
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -20,25 +21,36 @@ export class UserService {
   // Login a user
   login(credentials: { email: string; password: string }): Observable<LoginResponse> {
     const redirectUrl = localStorage.getItem('redirectUrl');
-    console.log("Saved:", redirectUrl);
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
-        localStorage.setItem('token', response.token);
+        if (response.token && response.user._id) {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('userId', response.user._id);
+          localStorage.setItem('userName', response.user.name);
+          localStorage.setItem('userEmail', response.user.email);
   
-        const redirectUrl = localStorage.getItem('redirectUrl');
-        if (redirectUrl) {
-          localStorage.removeItem('redirectUrl');
-          this.router.navigate([redirectUrl]);  
+          // Redirect user after login
+          if (redirectUrl) {
+            localStorage.removeItem('redirectUrl');
+            this.router.navigate([redirectUrl]);  
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
         } else {
-          this.router.navigate(['/dashboard']);
+          console.error('Login response does not contain required user information');
         }
       })
     );
   }
   
+
   // Logout a user
   logout(): void {
-    localStorage.removeItem('token');  // Remove JWT token from storage
+    localStorage.removeItem('token');  // Remove JWT token
+    localStorage.removeItem('userId'); // Remove userId
+    localStorage.removeItem('userName'); // Remove userName
+    localStorage.removeItem('userEmail'); // Remove userEmail
+    this.router.navigate(['/login']);  // Redirect to login
   }
 
   // Check if the user is authenticated
@@ -46,8 +58,33 @@ export class UserService {
     return !!localStorage.getItem('token');  // Returns true if token exists
   }
 
-  // Get user profile (you may use this in other areas)
-  getProfile(userId: string): Observable<any> {
+  // Get user profile using userId from storage
+  getProfile(): Observable<any> {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('User ID not found in storage');
+      throw new Error('User ID not found in storage');
+    }
     return this.http.get(`${this.apiUrl}/profile/${userId}`);
+  }
+
+  // Get communities associated with the user
+  getUserCommunities(): Observable<any> {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('User ID not found in storage');
+      throw new Error('User ID not found in storage');
+    }
+    return this.http.get(`${this.apiUrl}/${userId}/communities`);
+  }
+  
+
+  // Get user details from local storage
+  getUserDetails(): { userId: string | null; userName: string | null; userEmail: string | null } {
+    return {
+      userId: localStorage.getItem('userId'),
+      userName: localStorage.getItem('userName'),
+      userEmail: localStorage.getItem('userEmail')
+    };
   }
 }

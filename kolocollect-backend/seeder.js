@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const Community = require('./kolocollect-backend/models/Community'); // Make sure the path to your model is correct
+const Community = require('./models/Community'); // Make sure the path is correct
+const { ObjectId } = mongoose.Types;
 
 // Load environment variables
 dotenv.config();
@@ -16,7 +17,7 @@ mongoose.connect(process.env.MONGO_URI, {
     process.exit(1);
 });
 
-// Define some sample community data
+// Define new community data based on the schema
 const communities = [
     {
         name: 'Savings Club',
@@ -24,10 +25,14 @@ const communities = [
         members: 10,
         contributions: 5000,
         nextPayout: new Date(2024, 1, 20),
+        maxMembers: 20,  // Set maxMembers as required
+        contributionFrequency: 'monthly',  // Set contribution frequency as required
+        cycleLockEnabled: false,
+        backupFund: 1000,
         membersList: [
-            { name: 'John Doe' },
-            { name: 'Jane Smith' },
-            { name: 'Sarah Johnson' }
+            { userId: new ObjectId(), name: 'John Doe', email: 'johndoe@example.com' },
+            { userId: new ObjectId(), name: 'Jane Smith', email: 'janesmith@example.com' },
+            { userId: new ObjectId(), name: 'Sarah Johnson', email: 'sarahjohnson@example.com' }
         ]
     },
     {
@@ -36,10 +41,14 @@ const communities = [
         members: 25,
         contributions: 15000,
         nextPayout: new Date(2024, 2, 15),
+        maxMembers: 50,  // Set maxMembers as required
+        contributionFrequency: 'bi-weekly',  // Set contribution frequency as required
+        cycleLockEnabled: true,
+        backupFund: 5000,
         membersList: [
-            { name: 'Alice Brown' },
-            { name: 'Mark White' },
-            { name: 'Lucy Green' }
+            { userId: new ObjectId(), name: 'Alice Brown', email: 'alicebrown@example.com' },
+            { userId: new ObjectId(), name: 'Mark White', email: 'markwhite@example.com' },
+            { userId: new ObjectId(), name: 'Lucy Green', email: 'lucygreen@example.com' }
         ]
     }
 ];

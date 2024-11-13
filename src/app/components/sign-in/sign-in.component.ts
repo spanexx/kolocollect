@@ -24,17 +24,18 @@ export class SignInComponent {
 
   onSubmit(signInForm: any): void {
     if (signInForm.valid) {
+      console.log('Form submission data:', signInForm.value); // Log form submission data
       this.authService.login(signInForm.value.email, signInForm.value.password).subscribe(
         (response) => {
           console.log('Login successful', response);
-
-          // Check if there's a stored redirect URL
+  
+          // Redirect logic
           const redirectUrl = localStorage.getItem('redirectUrl');
           if (redirectUrl) {
-            localStorage.removeItem('redirectUrl');  // Clear it once used
-            this.router.navigate([redirectUrl]);  // Navigate to saved URL
+            localStorage.removeItem('redirectUrl');
+            this.router.navigate([redirectUrl]);
           } else {
-            this.router.navigate(['/dashboard']);  // Default navigation
+            this.router.navigate(['/dashboard']);
           }
         },
         (error) => {

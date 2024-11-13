@@ -39,22 +39,22 @@ export class JoinCommunityComponent implements OnInit {
     });
   }
 
-  onSubmit(): void {
-    const communityId = this.joinForm.value.communityId;
-    const userId = this.authService.getUserId(); // Automatically get user ID from auth service
+  // onSubmit(): void {
+  //   const communityId = this.joinForm.value.communityId;
+  //   const userId = this.authService.getUserId(); // Automatically get user ID from auth service
 
-    if (userId) {
-      this.communityService.joinCommunity(communityId, userId).subscribe({
-        next: (response) => {
-          console.log('Successfully joined community:', response);
-          this.router.navigate(['/community', communityId]); // Redirect to community detail page
-        },
-        error: (error) => {
-          console.error('Error joining community:', error);
-        }
-      });
-    } else {
-      console.error('User is not logged in');
-    }
-  }
+  //   if (userId) {
+  //     this.communityService.joinCommunity(communityId, userId).subscribe({
+  //       next: (response) => {
+  //         console.log('Successfully joined community:', response);
+  //         this.router.navigate(['/community', communityId]); // Redirect to community detail page
+  //       },
+  //       error: (error) => {
+  //         console.error('Error joining community:', error);
+  //       }
+  //     });
+  //   } else {
+  //     console.error('User is not logged in');
+  //   }
+  // }
 }

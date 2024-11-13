@@ -12,7 +12,9 @@ export class AuthService {
   public currentUser: Observable<any>;
 
   constructor(private http: HttpClient) {
-    this.currentUserSubject = new BehaviorSubject<any>(JSON.parse(localStorage.getItem('currentUser')!));
+    // Initialize currentUser from localStorage
+    const storedUser = JSON.parse(localStorage.getItem('currentUser')!);
+    this.currentUserSubject = new BehaviorSubject<any>(storedUser);
     this.currentUser = this.currentUserSubject.asObservable();
   }
 
@@ -21,37 +23,47 @@ export class AuthService {
     return this.http.post<any>(`${this.apiUrl}/register`, { name, email, password });
   }
 
-  // Login user
+  // Login user and store details in localStorage
   login(email: string, password: string): Observable<any> {
+    console.log('Login request data:', { email, password }); // Log request data
     return this.http.post<any>(`${this.apiUrl}/login`, { email, password }).pipe(
       map(user => {
+        console.log('Login response:', user); // Log response data
         if (user && user.token) {
-          localStorage.setItem('currentUser', JSON.stringify(user));  // Save user object and token
-          console.log('currentUser', user);
-          this.currentUserSubject.next(user);  // Update the current user observable
+          // Save user object and token in localStorage
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          localStorage.setItem('userId', user.user._id);
+          localStorage.setItem('userName', user.user.name);
+          localStorage.setItem('userEmail', user.user.email);
+          
+          this.currentUserSubject.next(user);
         }
         return user;
       })
     );
   }
+  
 
-  // Logout user
+  // Logout user and clear localStorage
   logout(): void {
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
     this.currentUserSubject.next(null);
   }
 
   // Get the current logged-in user's ID
   getUserId(): string | null {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser')!);
-    return currentUser && currentUser.user ? currentUser.user.id : null;
-    
+    return localStorage.getItem('userId');
   }
-  
 
-  // Check if user is logged in
+  // Check if the user is logged in
   isLoggedIn(): boolean {
     return !!this.currentUserSubject.value;
   }
-}
 
+  public get currentUserValue(): any {
+    return this.currentUserSubject.value;
+  }
+}

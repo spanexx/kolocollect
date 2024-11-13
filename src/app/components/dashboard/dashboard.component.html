@@ -1,64 +1,65 @@
 <div class="dashboard-container">
-    <!-- Welcome Section -->
-    <div class="welcome-section">
-      <h1>Welcome, {{userName}}!</h1>
-      <p>Here’s an overview of your contributions and savings progress.</p>
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <h1>Welcome, {{ user?.name }}!</h1>
+    <p>Here’s an overview of your contributions and savings progress.</p>
+  </div>
+
+  <!-- Quick Stats Section -->
+  <div class="quick-stats">
+    <div class="stat-card">
+      <h3>{{ totalCommunities }}</h3>
+      <p>Communities Joined</p>
     </div>
-  
-    <!-- Quick Stats Section -->
-    <div class="quick-stats">
-      <div class="stat-card">
-        <h3>{{totalCommunities}}</h3>
-        <p>Communities Joined</p>
-      </div>
-      <div class="stat-card">
-        <h3>{{totalContributions}}</h3>
-        <p>Contributions Made</p>
-      </div>
-      <div class="stat-card">
-        <h3>{{totalSavings}}</h3>
-        <p>Amount Saved</p>
-      </div>
-      <div class="stat-card">
-        <h3>{{upcomingPayout | date}}</h3>
-        <p>Next Payout</p>
-      </div>
+    <div class="stat-card">
+      <h3>{{ totalContributions }}</h3>
+      <p>Contributions Made</p>
     </div>
-  
-    <!-- Recent Activity Section -->
-    <div class="recent-activity">
-      <h2>Recent Activity</h2>
-      <ul>
-        <li *ngFor="let activity of recentActivities">{{activity}}</li>
-      </ul>
+    <div class="stat-card">
+      <h3>{{ totalSavings | currency }}</h3>
+      <p>Amount Saved</p>
     </div>
-  
-    <!-- Savings Goals Progress -->
-    <div class="savings-goals">
-      <h2>Your Savings Goals</h2>
-      <div *ngFor="let goal of savingsGoals" class="goal">
-        <p>{{goal.name}}</p>
-        <div class="progress-bar">
-          <div class="progress" [style.width]="goal.progress + '%'"></div>
-        </div>
-      </div>
-    </div>
-  
-    <!-- Community Overview Section -->
-    <div class="community-overview">
-      <h2>Your Communities</h2>
-      <div class="community-card" *ngFor="let community of userCommunities">
-        <h3>{{community.name}}</h3>
-        <p>Next Contribution: {{community.nextContribution | date}}</p>
-        <a routerLink="/community/{{community.id}}" class="view-community">View Details</a>
-      </div>
-    </div>
-  
-    <!-- Call to Action Section -->
-    <div class="cta-buttons">
-      <button routerLink="/join-community" class="cta">Join a Community</button>
-      <button routerLink="/latest" class="cta">Latest Investments</button>
-      <button routerLink="/payout-schedule" class="cta">View Payout Schedule</button>
+    <div class="stat-card">
+      <h3>{{ upcomingPayout | date }}</h3>
+      <p>Next Payout</p>
     </div>
   </div>
-  
+
+  <!-- Recent Activity Section -->
+  <div class="recent-activity" *ngIf="recentActivities.length > 0">
+    <h2>Recent Activity</h2>
+    <ul>
+      <li *ngFor="let activity of recentActivities">{{ activity }}</li>
+    </ul>
+  </div>
+
+  <!-- Savings Goals Progress -->
+  <div class="savings-goals" *ngIf="savingsGoals.length > 0">
+    <h2>Your Savings Goals</h2>
+    <div *ngFor="let goal of savingsGoals" class="goal">
+      <p>{{ goal.name }}</p>
+      <div class="progress-bar">
+        <div class="progress" [style.width]="goal.progress + '%'"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Overview Section -->
+  <div class="community-overview" *ngIf="userCommunities.length > 0">
+    <h2>Your Communities</h2>
+    <div class="community-card" *ngFor="let community of userCommunities">
+      <h3>{{ community.name }}</h3>
+      <p>{{ community.description }}</p>
+      <p>Members: {{ community.members }}</p>
+      <p>Next Contribution Due: {{ community.nextPayout | date }}</p>
+      <a [routerLink]="['/community', community._id]" class="view-community">View Details</a>
+    </div>
+  </div>
+
+  <!-- Call to Action Section -->
+  <div class="cta-buttons">
+    <button routerLink="/community-list" class="cta">Join a Community</button>
+    <button routerLink="/latest" class="cta">Latest Investments</button>
+    <button routerLink="/payout-schedule" class="cta">View Payout Schedule</button>
+  </div>
+</div>

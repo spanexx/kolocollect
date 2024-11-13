@@ -17,37 +17,55 @@ mongoose.connect(process.env.MONGO_URI, {
     process.exit(1);
 });
 
-// Define sample user data
+// Define sample user data with role and dateJoined fields
 const users = [
     {
         name: 'John Doe',
         email: 'john@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'user',
+        dateJoined: new Date(),
+        communities: [] // Add community IDs if needed
     },
     {
         name: 'Jane Smith',
         email: 'jane@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'admin',
+        dateJoined: new Date(),
+        communities: []
     },
     {
         name: 'Alice Brown',
         email: 'alice@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'user',
+        dateJoined: new Date(),
+        communities: []
     },
     {
         name: 'Mark White',
         email: 'mark@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'user',
+        dateJoined: new Date(),
+        communities: []
     },
     {
         name: 'Sarah Johnson',
         email: 'sarah@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'admin',
+        dateJoined: new Date(),
+        communities: []
     },
     {
         name: 'Kennedy',
         email: 'kennedy@example.com',
         password: bcrypt.hashSync('password123', 10),
+        role: 'user',
+        dateJoined: new Date(),
+        communities: []
     },
 ];
 

@@ -1,30 +1,52 @@
-<div class="community-details-container">
-  <h1>{{community?.name}}</h1>
-  <p><strong>Community ID:</strong> {{community?._id}}</p>
-  <p>{{community?.description}}</p>
-
+<div class="community-details-container" *ngIf="community">
+  <h1>{{ community.name }}</h1>
+  <p><strong>Community ID:</strong> {{ community._id }}</p>
+  <p>{{ community.description }}</p>
 
   <div class="community-stats">
     <div class="stat-card">
       <h3>Total Members</h3>
-      <p>{{community?.members}}</p>
+      <p>{{ membersCount }}</p>
     </div>
     <div class="stat-card">
       <h3>Total Contributions</h3>
-      <p>{{community?.contributions | currency}}</p>
+      <p>{{ community.contributions | currency }}</p>
     </div>
     <div class="stat-card">
       <h3>Next Payout</h3>
-      <p>{{community?.nextPayout | date}}</p>
+      <p>{{ community.nextPayout | date }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Max Members</h3>
+      <p>{{ community.maxMembers }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Contribution Frequency</h3>
+      <p>{{ community.contributionFrequency }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Cycle Lock Enabled</h3>
+      <p>{{ community.cycleLockEnabled ? 'Yes' : 'No' }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Backup Fund</h3>
+      <p>{{ community.backupFund | currency }}</p>
     </div>
   </div>
 
   <div class="community-members">
     <h2>Members</h2>
     <ul>
-      <li *ngFor="let member of community?.membersList">{{member.name}}</li>
+      <li *ngFor="let member of community?.membersList">
+        {{ member.name }} ({{ member.email }})
+      </li>
     </ul>
   </div>
 
-<button class="cta" (click)="joinCommunity()">Join Community</button>
+  <button class="cta" (click)="joinCommunity()">Join Community</button>
+</div>
+
+<!-- Loading Spinner or Message when community is not available yet -->
+<div *ngIf="!community" class="loading-message">
+  <p>Loading community details...</p>
 </div>

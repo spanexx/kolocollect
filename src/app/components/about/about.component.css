@@ -1,0 +1,89 @@
+.about-us-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+  }
+  
+  .about-us-header {
+    text-align: center;
+  }
+  
+  .logo {
+    width: 150px;
+    margin: 0 auto;
+  }
+  
+  h1, h2 {
+    color: #646F3F;
+    margin-bottom: 10px;
+  }
+  
+  .mission-section, .features-section, .history-section, .team-section {
+    margin: 30px 0;
+  }
+  
+  /* Flexbox containers */
+  .features-container, .team-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .feature-card, .team-member {
+    background-color: #F5F5F5;
+    border: 1px solid #E5E5E5;
+    border-radius: 10px;
+    padding: 15px;
+    width: 300px;
+    text-align: center;
+  }
+  
+  /* Image styling */
+  .team-img {
+    width: 100px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+  }
+  
+  /* Timeline styles */
+  .timeline {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .timeline li {
+    padding: 10px 0;
+  }
+  
+  /* Responsive styling */
+  @media (max-width: 768px) {
+    .feature-card, .team-member {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .about-us-container {
+      padding: 10px;
+    }
+  
+    .logo {
+      width: 120px;
+    }
+  
+    h1, h2 {
+      font-size: 1.5rem;
+    }
+  
+    .feature-card, .team-member {
+      width: 100%;
+      padding: 10px;
+    }
+  
+    .team-img {
+      width: 80px;
+    }
+  }
+  

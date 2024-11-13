@@ -28,19 +28,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
-
-// Hash the password before saving the user
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hashSync(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  communities: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Community',
+    },
+  ], // Array to hold the community ObjectIds
 });
 
 // Method to check password validity

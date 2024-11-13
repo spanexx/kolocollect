@@ -10,7 +10,7 @@ import { CommunityService } from '../../services/community.service';
   standalone: true,
   imports: [RouterModule, FormsModule, CommonModule],
   templateUrl: './community-list.component.html',
-  styleUrl: './../community/community.component.css'
+  styleUrls: ['./../community/community.component.css']
 })
 export class CommunityListComponent implements OnInit {
   communities: Community[] = [];
@@ -23,7 +23,13 @@ export class CommunityListComponent implements OnInit {
 
   getCommunities(): void {
     this.communityService.getCommunities().subscribe(
-      (data: Community[]) => this.communities = data,
+      (data: Community[]) => {
+        // For each community, dynamically calculate the number of members
+        this.communities = data.map(community => ({
+          ...community,
+          members: community.membersList?.length || 0 // Calculate members count dynamically
+        }));
+      },
       (error) => console.log('Error fetching communities', error)
     );
   }
