@@ -14,75 +14,45 @@ exports.getCommunities = async (req, res) => {
 // Join a community
 exports.joinCommunity = async (req, res) => {
   try {
-    const { communityId } = req.params; // Get communityId from params
-    const { userId } = req.body; // Get userId from the request body
+    const { communityId } = req.params;
+    const { userId } = req.body;
 
-    // Log the incoming data for debugging purposes
     console.log("Join request received:", { userId, communityId });
 
-    // Ensure all necessary data is provided
     if (!communityId || !userId) {
-      console.log("Missing communityId or userId");
       return res.status(400).json({ message: 'Missing required communityId or userId' });
     }
 
-    // Check if the community and user exist in the database
     const community = await Community.findById(communityId);
     const user = await User.findById(userId);
-
-    // Log the results of these database queries
-    console.log("Community found:", community ? true : false);
-    console.log("User found:", user ? true : false);
 
     if (!community) return res.status(404).json({ message: 'Community not found' });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Additional checks: cycle lock, max members, etc.
-    if (community.cycleLockEnabled) {
-      console.log("Cycle lock is enabled for community", communityId);
-      return res.status(400).json({ message: 'Cycle lock is enabled, cannot join community at this time' });
-    }
-
-    // Check if the community has reached its maximum members
+    // Skip cycle lock check here for joining
     if (community.members >= community.maxMembers) {
-      console.log("Community has reached its max members");
       return res.status(400).json({ message: 'Community has reached its maximum number of members' });
     }
 
-    // Check if the user is already a member of the community
     const isAlreadyMember = community.membersList.some(member => member.userId.equals(user._id));
     if (isAlreadyMember) {
-      console.log("User is already a member of the community");
       return res.status(400).json({ message: 'User is already a member of the community' });
     }
 
-    // Add user to community membersList and update member count
     community.membersList.push({ userId: user._id, name: user.name, email: user.email });
     community.members += 1;
-
-    // Add the community to the user's list of communities
     if (!user.communities.includes(communityId)) {
       user.communities.push(communityId);
     }
-
-    // Save both user and community after updates
     await community.save();
     await user.save();
 
-    // Log successful join action
-    console.log("User successfully joined community", communityId);
-
-    // Send success response
     res.status(200).json({ message: 'Successfully joined the community', community });
   } catch (err) {
-    // Log the error for debugging purposes
-    console.error("Error in joinCommunity:", err);
-
-    // Send error response
+    console.error('Error in joinCommunity:', err);
     res.status(500).json({ error: 'An error occurred while processing your request' });
   }
 };
-
 
 // Get a single community by ID
 exports.getCommunityById = async (req, res) => {

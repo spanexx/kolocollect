@@ -1,222 +1,307 @@
 .dashboard-container {
-    padding: 20px 40px;
-    background-color: #f7f7f7;
-    font-family: 'Poppins', sans-serif;
-  
-    .welcome-section {
-      text-align: center;
-      margin-bottom: 40px;
-  
-      h1 {
-        font-size: 2.5rem;
-        color: #4b5320;
-      }
-  
-      p {
-        font-size: 1.2rem;
-        color: #333;
-      }
-    }
-  
-    .quick-stats {
-      display: flex;
-      justify-content: space-around;
-      flex-wrap: wrap; /* Allow cards to wrap on smaller screens */
-      margin-bottom: 40px;
-      margin-right: 40px;
-  
-      .stat-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        flex: 1 1 calc(25% - 20px); /* Ensure cards are 25% width minus margin */
-        margin: 10px; /* Add margin to give space between cards */
-  
-        h3 {
-          font-size: 2rem;
-          color: #4b5320;
-        }
-  
-        p {
-          font-size: 1rem;
-          color: #666;
-        }
-      }
-    }
-  
-    .recent-activity {
-      margin-bottom: 40px;
-  
-      h2 {
-        font-size: 1.8rem;
-        color: #4b5320;
-        margin-bottom: 20px;
-      }
-  
-      ul {
-        list-style: none;
-        padding: 0;
-  
-        li {
-          background-color: white;
-          padding: 10px 20px;
-          margin-bottom: 10px;
-          border-radius: 5px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-      }
-    }
-  
-    .savings-goals {
-      margin-bottom: 40px;
-  
-      h2 {
-        font-size: 1.8rem;
-        color: #4b5320;
-        margin-bottom: 20px;
-      }
-  
-      .goal {
-        margin-bottom: 20px;
-  
-        p {
-          font-size: 1.2rem;
-          margin-bottom: 5px;
-          color: #333;
-        }
-  
-        .progress-bar {
-          background-color: #eaeaea;
-          border-radius: 5px;
-          height: 20px;
-  
-          .progress {
-            background-color: #4b5320;
-            height: 100%;
-            border-radius: 5px;
-          }
-        }
-      }
-    }
-  
-    .community-overview {
-      margin-bottom: 40px;
-  
-      h2 {
-        font-size: 1.8rem;
-        color: #4b5320;
-        margin-bottom: 20px;
-      }
-  
-      .community-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  
-        h3 {
-          font-size: 1.5rem;
-          color: #4b5320;
-        }
-  
-        p {
-          font-size: 1rem;
-          color: #666;
-        }
-  
-        .view-community {
-          color: #ffcc00;
-          text-decoration: none;
-  
-          &:hover {
-            text-decoration: underline;
-          }
-        }
-      }
-    }
-  
-    .cta-buttons {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 40px;
-  
-      .cta {
-        padding: 15px 30px;
-        background-color: #ffcc00;
-        color: #000;
-        border: none;
-        border-radius: 5px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-  
-        &:hover {
-          background-color: #e6b800;
-        }
-      }
-    }
-  
-    /* Responsive Styles */
-    @media (max-width: 1024px) {
-      .quick-stats {
-        flex-wrap: wrap;
-  
-        .stat-card {
-          flex: 1 1 calc(50% - 20px); /* 50% width for medium screens */
-          margin-bottom: 20px;
-        }
-      }
-    }
-  
-    @media (max-width: 768px) {
-      padding: 20px;
-  
-      .welcome-section h1 {
-        font-size: 2rem;
-      }
-  
-      .quick-stats {
-        flex-direction: column;
-        align-items: center;
-  
-        .stat-card {
-          width: 100%; /* Full width on smaller screens */
-          margin-bottom: 20px;
-        }
-      }
-  
-      .cta-buttons {
-        flex-direction: column;
-        align-items: center;
-  
-        .cta {
-          width: 100%;
-          margin-bottom: 20px;
-        }
-      }
-    }
-  
-    @media (max-width: 480px) {
-      .welcome-section h1 {
-        font-size: 1.8rem;
-      }
-  
-      .quick-stats .stat-card h3 {
-        font-size: 1.5rem;
-      }
-  
-      .recent-activity h2,
-      .savings-goals h2,
-      .community-overview h2 {
-        font-size: 1.5rem;
-      }
-  
-      .community-card h3 {
-        font-size: 1.2rem;
-      }
+  padding: 20px 40px;
+  background-color: #f7f7f7;
+  font-family: 'Poppins', sans-serif;
+  color: #333;
+  position: relative; /* Ensure that the notification is positioned relative to this container */
+}
+
+/* Welcome Section */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.welcome-section h1 {
+  font-size: 2.5rem;
+  color: #4b5320;
+}
+
+.welcome-section p {
+  font-size: 1.2rem;
+  color: #333;
+}
+
+/* Notification Toggle */
+.notification-toggle {
+  position: absolute; /* Absolute positioning */
+  top: 20px; /* Adjust top position */
+  right: 20px; /* Adjust right position */
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 1.5rem;
+  z-index: 10; /* Make sure it stays on top of other elements */
+}
+
+/* Notification Icon Styles */
+.notification-icon i {
+  margin-right: 10px;
+  font-size: 1.8rem; /* Adjust icon size */
+  transition: color 0.3s ease; /* Smooth color transition */
+}
+
+.notification-icon.no-notification i {
+  color: #ffcc00; /* Yellow when no notifications */
+}
+
+.notification-icon.has-notification i {
+  color: #ff0000; /* Red when there are notifications */
+}
+
+
+/* Quick Stats Section */
+.quick-stats {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  flex: 1 1 calc(25% - 20px);
+  margin: 10px;
+}
+
+.stat-card h3 {
+  font-size: 2rem;
+  color: #4b5320;
+}
+
+.stat-card p {
+  font-size: 1rem;
+  color: #666;
+}
+
+/* Recent Activity Section */
+.recent-activity {
+  margin-bottom: 40px;
+}
+
+.recent-activity h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.recent-activity ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recent-activity li {
+  background-color: white;
+  padding: 10px 20px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Savings Goals Progress */
+.savings-goals {
+  margin-bottom: 40px;
+}
+
+.savings-goals h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.goal {
+  margin-bottom: 20px;
+}
+
+.goal p {
+  font-size: 1.2rem;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.progress-bar {
+  background-color: #eaeaea;
+  border-radius: 5px;
+  height: 20px;
+}
+
+.progress {
+  background-color: #4b5320;
+  height: 100%;
+  border-radius: 5px;
+}
+
+/* Community Overview Section */
+.community-overview {
+  margin-bottom: 40px;
+}
+
+.community-overview h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.community-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.community-card h3 {
+  font-size: 1.5rem;
+  color: #4b5320;
+}
+
+.community-card p {
+  font-size: 1rem;
+  color: #666;
+}
+
+.view-community {
+  color: #ffcc00;
+  text-decoration: none;
+}
+
+.view-community:hover {
+  text-decoration: underline;
+}
+
+/* Community Notifications Section */
+.community-notifications {
+  margin-bottom: 40px;
+}
+
+.community-notifications h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.community-notifications ul {
+  list-style: none;
+  padding: 0;
+}
+
+.community-notifications li {
+  background-color: white;
+  padding: 10px 20px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Call to Action Section */
+.cta-buttons {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 40px;
+}
+
+.cta {
+  padding: 15px 30px;
+  background-color: #ffcc00;
+  color: #000;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  flex: 1 1 calc(33% - 20px);
+  margin: 10px;
+}
+
+.cta:hover {
+  background-color: #e6b800;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 20px;
+  }
+
+  /* Quick Stats Section */
+  .quick-stats {
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+
+  .stat-card {
+    flex: 1 1 calc(50% - 20px);
+    margin-bottom: 20px;
+  }
+
+  /* Call to Action Section */
+  .cta-buttons {
+    .cta {
+      flex: 1 1 calc(50% - 20px);
+      margin-bottom: 20px;
     }
   }
-  
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 20px;
+  }
+
+  .welcome-section h1 {
+    font-size: 2rem;
+  }
+
+  /* Quick Stats Section */
+  .quick-stats {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-card {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  /* Call to Action Section */
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cta {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-section h1 {
+    font-size: 1.8rem;
+  }
+
+  .quick-stats .stat-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .recent-activity h2,
+  .savings-goals h2,
+  .community-overview h2 {
+    font-size: 1.5rem;
+  }
+
+  .community-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .cta-buttons {
+    .cta {
+      font-size: 1rem;
+    }
+  }
+}

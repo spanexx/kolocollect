@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { Community } from '../models/Community';
 
 @Injectable({
   providedIn: 'root'
@@ -35,8 +36,10 @@ export class AuthService {
           localStorage.setItem('userId', user.user._id);
           localStorage.setItem('userName', user.user.name);
           localStorage.setItem('userEmail', user.user.email);
-          
+  
+          // Set user in BehaviorSubject
           this.currentUserSubject.next(user);
+  
         }
         return user;
       })
@@ -55,8 +58,9 @@ export class AuthService {
 
   // Get the current logged-in user's ID
   getUserId(): string | null {
-    return localStorage.getItem('userId');
+    return this.currentUserSubject.value?.user?._id || null;
   }
+  
 
   // Check if the user is logged in
   isLoggedIn(): boolean {
@@ -65,5 +69,9 @@ export class AuthService {
 
   public get currentUserValue(): any {
     return this.currentUserSubject.value;
+  }
+
+  getUserCommunities(userId: string) {
+    return this.http.get<Community[]>(`${this.apiUrl}/${userId}/communities`);
   }
 }

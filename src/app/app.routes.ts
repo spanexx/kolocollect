@@ -12,6 +12,7 @@ import { authGuard } from './services/auth.guard';  // Import the functional aut
 import { JoinCommunityComponent } from './components/join-community/join-community.component';
 import { AboutComponent } from './components/about/about.component';
 import { CreateCommunityComponent } from './components/create-community/create-community.component';
+import { CommunitySettingsComponent } from './components/community-settings/community-settings.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
@@ -21,9 +22,11 @@ export const routes: Routes = [
   { path: 'receive-payout', component: ReceivePayoutComponent, canActivate: [authGuard] },  // Protected route
   { path: 'sign-in', component: SignInComponent },
   { path: 'sign-up', component: SignUpComponent },
-  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },  // Protected route
-  { path: 'latest', component: LatestComponent, canActivate: [authGuard] },  // Protected route
-  { path: 'create-community', component: CreateCommunityComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },  
+  { path: 'latest', component: LatestComponent, canActivate: [authGuard] }, 
+  { path: 'create-community', component: CreateCommunityComponent, canActivate: [authGuard] }, 
   { path: 'community-list', component: CommunityListComponent },
-  { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  // Protected route
+  { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  
+  { path: 'community-settings', component: CommunitySettingsComponent, canActivate: [authGuard] },  
+
 ];

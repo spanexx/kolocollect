@@ -5,6 +5,13 @@
     <p>Here’s an overview of your contributions and savings progress.</p>
   </div>
 
+  <div class="notification-toggle" (click)="toggleNotifications()">
+    <span class="notification-icon" [ngClass]="unreadNotificationsCount > 0 ? 'has-notification' : 'no-notification'">
+      <i class="fa fa-bell"></i> <!-- Font Awesome Bell Icon -->
+    </span>
+  </div>
+  
+
   <!-- Quick Stats Section -->
   <div class="quick-stats">
     <div class="stat-card">
@@ -50,10 +57,18 @@
     <div class="community-card" *ngFor="let community of userCommunities">
       <h3>{{ community.name }}</h3>
       <p>{{ community.description }}</p>
-      <p>Members: {{ community.members }}</p>
+      <p>Members: {{ community.membersList.length }}</p>
       <p>Next Contribution Due: {{ community.nextPayout | date }}</p>
       <a [routerLink]="['/community', community._id]" class="view-community">View Details</a>
     </div>
+  </div>
+
+  <!-- Community Notifications Section -->
+  <div class="community-notifications" *ngIf="showNotifications">
+    <h2>Community Notifications</h2>
+    <ul>
+      <li *ngFor="let notification of communityNotifications">{{ notification }}</li>
+    </ul>
   </div>
 
   <!-- Call to Action Section -->
@@ -61,5 +76,6 @@
     <button routerLink="/community-list" class="cta">Join a Community</button>
     <button routerLink="/latest" class="cta">Latest Investments</button>
     <button routerLink="/payout-schedule" class="cta">View Payout Schedule</button>
+    <button (click)="createCommunity()" class="cta">Create a Community</button>
   </div>
 </div>

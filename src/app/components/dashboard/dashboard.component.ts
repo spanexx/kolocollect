@@ -23,16 +23,25 @@ export class DashboardComponent implements OnInit {
   recentActivities: string[] = [];
   savingsGoals: { name: string; progress: number }[] = [];
   userCommunities: Community[] = [];
+  showNotifications = false; 
+  unreadNotificationsCount = 5;
+
+  communityNotifications = [
+    "New member joined your community",
+    "Upcoming payout schedule updated",
+    "Reminder: Contribution due in 3 days"
+  ];
+
 
   constructor(
     private authService: AuthService, 
     private router: Router
   ) {}
-
   ngOnInit(): void {
     // Get the current user from AuthService
     const currentUser = this.authService.currentUserValue?.user;
-
+    console.log('Current User:', currentUser);  // Log the current user data
+    
     if (currentUser) {
       // Set user data from AuthService
       this.user = currentUser;
@@ -41,14 +50,35 @@ export class DashboardComponent implements OnInit {
       this.upcomingPayout = currentUser.upcomingPayout || null;
       this.recentActivities = currentUser.recentActivities || [];
       this.savingsGoals = currentUser.savingsGoals || [];
+  
+      // Pass the user ID to get the communities
+      this.authService.getUserCommunities(currentUser.id).subscribe(
+        (communities) => {
+          this.userCommunities = communities;
+          this.totalCommunities = this.userCommunities.length;
+          console.log('User Communities:', this.userCommunities);  // Log the fetched communities
+        },
+        (error) => {
+          console.error('Error fetching communities:', error);  // Log any errors
+        }
+      );
 
-      // Get the communities from the current user object
-      this.userCommunities = currentUser.communities || [];
-      this.totalCommunities = this.userCommunities.length;
-
+      
     } else {
       console.error('User is not logged in. Redirecting to login.');
       this.router.navigate(['/login']);
     }
+
+    
   }
+  
+
+  createCommunity() {
+    this.router.navigate(['/create-community']);
+  }
+
+    // Method to toggle notifications
+    toggleNotifications() {
+      this.showNotifications = !this.showNotifications;
+    }
 }

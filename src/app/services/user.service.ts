@@ -28,6 +28,8 @@ export class UserService {
           localStorage.setItem('userId', response.user._id);
           localStorage.setItem('userName', response.user.name);
           localStorage.setItem('userEmail', response.user.email);
+          // localStorage.setItem('userCommunities', response.user.);
+
   
           // Redirect user after login
           if (redirectUrl) {
@@ -80,11 +82,12 @@ export class UserService {
   
 
   // Get user details from local storage
-  getUserDetails(): { userId: string | null; userName: string | null; userEmail: string | null } {
+  getUserDetails(): { userId: string | null; userName: string | null; userEmail: string | null, userCommunities: string | null} {
     return {
       userId: localStorage.getItem('userId'),
       userName: localStorage.getItem('userName'),
-      userEmail: localStorage.getItem('userEmail')
+      userEmail: localStorage.getItem('userEmail'),
+      userCommunities: localStorage.getItem('userCommunities')
     };
   }
 }
