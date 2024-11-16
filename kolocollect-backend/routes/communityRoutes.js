@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const communityController = require('../controllers/communityController');
 
+
 // Routes for communities
 
 // Get all communities
@@ -14,7 +15,7 @@ router.get('/:id', communityController.getCommunityById);
 router.post('/:communityId/join', communityController.joinCommunity);
 
 // Create a new community
-router.post('/', communityController.createCommunity);
+router.post('/create', communityController.createCommunity);
 
 // Update a community (ensure valid ID and necessary fields in body)
 router.put('/update/:id', communityController.updateCommunity);

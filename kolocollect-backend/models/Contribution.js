@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+
 const contributionSchema = new mongoose.Schema({
   communityId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,10 +17,25 @@ const contributionSchema = new mongoose.Schema({
     required: true,
   },
   contributionDate: {
-    type: Date,
-    default: Date.now,
+    type: String,
+    required: true,
   },
+  status: {
+    type: String,
+    enum: ['Pending', 'Completed'],
+    default: 'Pending',
+  },
+  paymentMethod: { 
+    type: String, 
+    required: false },
+
+  transactionId: {
+    type: String,  // Unique identifier for the transaction
+    required: false,
+  }
 });
+
+
 
 const Contribution = mongoose.model('Contribution', contributionSchema);
 

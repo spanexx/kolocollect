@@ -5,13 +5,27 @@ import { Router, RouterModule } from '@angular/router';
 import { User } from '../../models/User';
 import { Community } from '../../models/Community';
 import { AuthService } from '../../services/auth.service';
+import { trigger, transition, style, animate } from '@angular/animations';
+
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [RouterModule, FormsModule, CommonModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+  styleUrls: ['./dashboard.component.css'],
+  animations: [
+    trigger('expandCollapse', [
+      transition(':enter', [
+        style({ maxHeight: 0, opacity: 0 }),
+        animate('300ms ease-out', style({ maxHeight: '200px', opacity: 1 })),
+      ]),
+      transition(':leave', [
+        style({ maxHeight: '200px', opacity: 1 }),
+        animate('300ms ease-in', style({ maxHeight: 0, opacity: 0 })),
+      ]),
+    ]),
+  ]
 })
 export class DashboardComponent implements OnInit {
   user: User | null = null;
@@ -25,6 +39,10 @@ export class DashboardComponent implements OnInit {
   userCommunities: Community[] = [];
   showNotifications = false; 
   unreadNotificationsCount = 5;
+
+
+  openCommunityId: string | null = null; // Track which community is open
+
 
   communityNotifications = [
     "New member joined your community",
@@ -81,4 +99,20 @@ export class DashboardComponent implements OnInit {
     toggleNotifications() {
       this.showNotifications = !this.showNotifications;
     }
+
+
+    // Toggle community details visibility
+  toggleCommunityDetails(communityId: string) {
+    if (this.openCommunityId === communityId) {
+      this.openCommunityId = null; // Close if already open
+    } else {
+      this.openCommunityId = communityId; // Open the clicked community
+    }
+  }
+
+  // Check if a community is open
+  isCommunityOpen(communityId: string): boolean {
+    return this.openCommunityId === communityId;
+  }
+
 }

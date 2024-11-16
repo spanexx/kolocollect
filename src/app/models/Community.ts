@@ -2,17 +2,19 @@ export interface Community {
   _id?: string;
   name: string;
   description: string;
-  members: number;  // Default: 0
-  maxMembers: number;  // Maximum number of members allowed in the community
-  contributions: number;  // Default: 0
+  contributionFrequency: string;
+  maxMembers: number;
+  cycleLockEnabled: boolean;
+  backupFund: number;
+  availableBalance: number; // Tracks 90% contributions
+  isPrivate: boolean;
+  contributionLimit: number;
+  adminId: string;
+  membersList: Array<{ userId: string; name: string; email: string; contributionsPaid?: number }>;
+  members: number;
+  contributions: number;
   nextPayout: Date;
-  contributionFrequency: 'weekly' | 'bi-weekly' | 'monthly';  // Contribution frequency
-  cycleLockEnabled: boolean;  // Whether cycle lock is enabled
-  backupFund: number;  // Amount in the backup fund
-  membersList: Array<{
-    userId: string;
-    name: string;
-    email: string;
-    contributionsPaid: number;  // Contributions paid by the member so far
-  }>;
+  userId?: string; // Optional field for API payload
+  userName?: string; // Optional field for API payload
+  userEmail?: string; // Optional field for API payload
 }

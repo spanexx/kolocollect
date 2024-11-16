@@ -1,27 +1,119 @@
 <div class="create-community-container">
-    <h1>Create a New Community</h1>
-  
-    <form (ngSubmit)="onSubmit()" #createCommunityForm="ngForm">
-      <div class="form-group">
-        <label for="name">Community Name</label>
-        <input type="text" id="name" name="name" required [(ngModel)]="community.name">
+  <h1>Create a New Community</h1>
+
+  <form (ngSubmit)="onSubmit()" #createCommunityForm="ngForm">
+    <!-- Community Name -->
+    <div class="form-group">
+      <label for="name">Community Name</label>
+      <input
+        type="text"
+        id="name"
+        name="name"
+        required
+        [(ngModel)]="community.name"
+        #name="ngModel"
+      />
+      <div *ngIf="name.invalid && name.touched" class="error-message">
+        Community Name is required.
       </div>
-  
-      <div class="form-group">
-        <label for="description">Community Description</label>
-        <textarea id="description" name="description" required [(ngModel)]="community.description"></textarea>
+    </div>
+
+    <!-- Community Description -->
+    <div class="form-group">
+      <label for="description">Community Description</label>
+      <textarea
+        id="description"
+        name="description"
+        required
+        [(ngModel)]="community.description"
+        #description="ngModel"
+      ></textarea>
+      <div *ngIf="description.invalid && description.touched" class="error-message">
+        Community Description is required.
       </div>
-  
-      <div class="form-group">
-        <label for="contributionFrequency">Contribution Frequency</label>
-        <select id="contributionFrequency" name="contributionFrequency" required [(ngModel)]="community.contributionFrequency">
-          <option value="weekly">Weekly</option>
-          <option value="bi-weekly">Bi-Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
+    </div>
+
+    <!-- Contribution Frequency -->
+    <div class="form-group">
+      <label for="contributionFrequency">Contribution Frequency</label>
+      <select
+        id="contributionFrequency"
+        name="contributionFrequency"
+        required
+        [(ngModel)]="community.contributionFrequency"
+        #contributionFrequency="ngModel"
+      >
+        <option value="weekly">Weekly</option>
+        <option value="bi-weekly">Bi-Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+      <div *ngIf="contributionFrequency.invalid && contributionFrequency.touched" class="error-message">
+        Contribution Frequency is required.
       </div>
-  
-      <button type="submit" class="cta">Create Community</button>
-    </form>
-  </div>
-  
+    </div>
+
+    <!-- Max Members -->
+    <div class="form-group">
+      <label for="maxMembers">Max Members</label>
+      <input
+        type="number"
+        id="maxMembers"
+        name="maxMembers"
+        required
+        [(ngModel)]="community.maxMembers"
+        #maxMembers="ngModel"
+      />
+      <div *ngIf="maxMembers.invalid && maxMembers.touched" class="error-message">
+        Max Members is required.
+      </div>
+    </div>
+
+    <!-- Cycle Lock Enabled -->
+    <div class="form-group">
+      <label for="cycleLockEnabled">Enable Cycle Lock</label>
+      <input
+        type="checkbox"
+        id="cycleLockEnabled"
+        name="cycleLockEnabled"
+        [(ngModel)]="community.cycleLockEnabled"
+      />
+    </div>
+
+    <!-- Backup Fund -->
+    <div class="form-group">
+      <label for="backupFund">Backup Fund</label>
+      <input
+        type="number"
+        id="backupFund"
+        name="backupFund"
+        [(ngModel)]="community.backupFund"
+      />
+    </div>
+
+    <!-- Is Private -->
+    <div class="form-group">
+      <label for="isPrivate">Private Community</label>
+      <input
+        type="checkbox"
+        id="isPrivate"
+        name="isPrivate"
+        [(ngModel)]="community.isPrivate"
+      />
+    </div>
+
+    <!-- Contribution Limit -->
+    <div class="form-group">
+      <label for="contributionLimit">Contribution Limit</label>
+      <input
+        type="number"
+        id="contributionLimit"
+        name="contributionLimit"
+        [(ngModel)]="community.contributionLimit"
+      />
+    </div>
+
+    <button type="submit" class="cta" [disabled]="createCommunityForm.invalid">
+      Create Community
+    </button>
+  </form>
+</div>

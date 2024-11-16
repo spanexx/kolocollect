@@ -33,7 +33,7 @@ export class AuthService {
         if (user && user.token) {
           // Save user object and token in localStorage
           localStorage.setItem('currentUser', JSON.stringify(user));
-          localStorage.setItem('userId', user.user._id);
+          localStorage.setItem('userId', user.user.id);
           localStorage.setItem('userName', user.user.name);
           localStorage.setItem('userEmail', user.user.email);
   

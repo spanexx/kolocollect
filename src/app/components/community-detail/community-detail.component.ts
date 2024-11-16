@@ -6,19 +6,24 @@ import { CommunityService } from '../../services/community.service';
 import { AuthService } from '../../services/auth.service';
 import { Community } from '../../models/Community';
 import { User } from '../../models/User';  // Import User model
+import { ContributeFormComponent } from '../contribute-form/contribute-form.component';
 
 @Component({
   selector: 'app-community-detail',
   standalone: true,
-  imports: [RouterModule, FormsModule, CommonModule],
+  imports: [RouterModule, FormsModule, CommonModule, ContributeFormComponent],
   templateUrl: './community-detail.component.html',
   styleUrls: ['./community-detail.component.css']
 })
 export class CommunityDetailComponent implements OnInit {
   community?: Community;
   communityId!: string;
-  membersCount: number = 0; // This will store the dynamic number of members
-  currentUser!: User; // Declare the currentUser property
+  membersCount: number = 0; 
+  currentUser!: User; 
+  customDate: Date = new Date('2024-11-16'); // Example date
+
+  membersVisible: boolean = false; 
+  showContributeModal: boolean = false; // Flag to control modal visibility
 
   constructor(
     private route: ActivatedRoute,
@@ -31,7 +36,8 @@ export class CommunityDetailComponent implements OnInit {
     this.communityId = this.route.snapshot.paramMap.get('id') ?? '';
 
     // Get current user from AuthService
-    this.currentUser = this.authService.currentUserValue; // Get current user
+    this.currentUser = this.authService.currentUserValue.user;
+    console.log(this.currentUser.id);
 
     // If no current user, redirect to sign-in
     if (!this.currentUser) {
@@ -48,7 +54,6 @@ export class CommunityDetailComponent implements OnInit {
       if (parsedCommunity?._id === this.communityId) {
         this.community = parsedCommunity;
         this.updateMembersCount(); // Update the members count based on local storage
-        console.log('Loaded community from local storage:', this.community);
       } else {
         // If the communityId doesn't match, fetch it from the API
         this.loadCommunityDetails();
@@ -118,11 +123,28 @@ export class CommunityDetailComponent implements OnInit {
       error: (error) => {
         if (error.status === 401 && error.message.includes("Cycle lock is enabled")) {
           alert(error.message);
-        }else {
+        } else {
           console.error("Error joining community:", error);
         }
       }
     });
   }
-  
+
+  goToCommunitySettings(): void {
+    this.router.navigate([`/community/${this.communityId}/settings`]);
+  }
+
+  // Modified to open the modal instead of navigating to a new route
+  goToContributeForm(): void {
+    this.showContributeModal = true; // Show the modal when the contribute button is clicked
+  }
+
+  // Method to close the modal
+  closeContributeModal(): void {
+    this.showContributeModal = false; // Hide the modal when closing
+  }
+
+  toggleMembers() {
+    this.membersVisible = !this.membersVisible;
+  }
 }

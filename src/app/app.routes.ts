@@ -13,6 +13,7 @@ import { JoinCommunityComponent } from './components/join-community/join-communi
 import { AboutComponent } from './components/about/about.component';
 import { CreateCommunityComponent } from './components/create-community/create-community.component';
 import { CommunitySettingsComponent } from './components/community-settings/community-settings.component';
+import { ContributeFormComponent } from './components/contribute-form/contribute-form.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
@@ -27,6 +28,8 @@ export const routes: Routes = [
   { path: 'create-community', component: CreateCommunityComponent, canActivate: [authGuard] }, 
   { path: 'community-list', component: CommunityListComponent },
   { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  
-  { path: 'community-settings', component: CommunitySettingsComponent, canActivate: [authGuard] },  
+  { path: 'community/:id/settings', component: CommunitySettingsComponent, canActivate: [authGuard] },
+  { path: 'community/:id/contribute', component: ContributeFormComponent },
+
 
 ];

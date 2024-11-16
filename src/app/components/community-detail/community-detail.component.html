@@ -3,6 +3,12 @@
   <p><strong>Community ID:</strong> {{ community._id }}</p>
   <p>{{ community.description }}</p>
 
+  <i
+    *ngIf="currentUser && community?.adminId === currentUser.id"
+    class="fas fa-cog settings-icon"
+    (click)="goToCommunitySettings()"
+  ></i>
+
   <div class="community-stats">
     <div class="stat-card">
       <h3>Total Members</h3>
@@ -35,16 +41,30 @@
   </div>
 
   <div class="community-members">
-    <h2>Members</h2>
-    <ul>
-      <li *ngFor="let member of community?.membersList">
-        {{ member.name }} ({{ member.email }})
-      </li>
-    </ul>
+    <h2 (click)="toggleMembers()">
+      Members <i class="fas" [ngClass]="{'fa-chevron-down': !membersVisible, 'fa-chevron-up': membersVisible}"></i>
+    </h2>
+
+    <div *ngIf="membersVisible" class="members-list">
+      <ul>
+        <li *ngFor="let member of community?.membersList">
+          <strong>{{ member.name }}</strong><br />
+          <span>{{ member.email }}</span>
+        </li>
+      </ul>
+    </div>
   </div>
 
   <button class="cta" (click)="joinCommunity()">Join Community</button>
+  <button class="cta" (click)="goToContributeForm()">Contribute</button>
 </div>
+
+<app-contribute-form *ngIf="showContributeModal" 
+  [communityId]="communityId" 
+  [showModal]="showContributeModal"
+  [contributionDate]="customDate" 
+  (close)="closeContributeModal()">
+</app-contribute-form>
 
 <!-- Loading Spinner or Message when community is not available yet -->
 <div *ngIf="!community" class="loading-message">

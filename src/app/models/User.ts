@@ -1,5 +1,5 @@
 export interface User {
-  _id?: string;                     // MongoDB ObjectId as string
+  id?: string;                     // MongoDB ObjectId as string
   name: string;                     // User's name
   email: string;                    // User's email, must be unique
   password?: string;                // Password is optional when updating the user, don't expose it on response

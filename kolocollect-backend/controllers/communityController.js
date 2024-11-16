@@ -68,19 +68,24 @@ exports.getCommunityById = async (req, res) => {
 // Create a new community
 exports.createCommunity = async (req, res) => {
   try {
-    const { name, description, maxMembers, contributionFrequency, cycleLockEnabled, backupFund, nextPayout, membersList = [], contributions = 0 } = req.body;
+    const {
+      name,
+      description,
+      maxMembers,
+      contributionFrequency,
+      cycleLockEnabled,
+      backupFund,
+      nextPayout,
+      isPrivate = false,
+      contributionLimit = 1000,
+      userId,       // Include userId, name, and email in request body
+      userName,
+      userEmail,
+    } = req.body;
 
-    // Validate required fields
-    if (!name || !maxMembers || !contributionFrequency) {
+    if (!name || !maxMembers || !contributionFrequency || !nextPayout || !userId) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-
-    // Ensure membersList includes email for each member
-    membersList.forEach(member => {
-      if (!member.email) {
-        return res.status(400).json({ message: 'Each member must have an email' });
-      }
-    });
 
     const newCommunity = new Community({
       name,
@@ -90,18 +95,31 @@ exports.createCommunity = async (req, res) => {
       cycleLockEnabled: cycleLockEnabled || false,
       backupFund: backupFund || 0,
       nextPayout,
-      membersList,
-      contributions,
-      members: membersList.length
+      isPrivate,
+      contributionLimit,
+      adminId: userId, // Assign userId as adminId
+      membersList: [{
+        userId,
+        name: userName,
+        email: userEmail,
+      }],
+      members: 1, // Initial members count includes the admin
     });
 
     await newCommunity.save();
+
+    const user = await User.findById(userId);
+    if (user) {
+      user.communities.push(newCommunity._id);
+      await user.save();
+    }
+
     res.status(201).json(newCommunity);
   } catch (err) {
+    console.error('Error in createCommunity:', err);
     res.status(500).json({ error: err.message });
   }
 };
-
 
 // Update a community
 exports.updateCommunity = async (req, res) => {

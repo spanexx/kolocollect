@@ -222,6 +222,94 @@
   background-color: #e6b800;
 }
 
+
+
+/* Community Overview Section */
+.community-overview {
+  margin-bottom: 40px;
+}
+
+.community-overview h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.community-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.community-card h3 {
+  font-size: 1.5rem;
+  color: #4b5320;
+  cursor: pointer; /* Make the title clickable */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  transition: all 0.3s ease; /* Smooth transition on hover */
+}
+
+.community-card h3:hover {
+  color: #ffcc00; /* Highlight title on hover */
+}
+
+.community-details {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-left: 3px solid #4b5320;
+  margin-top: 10px;
+  display: block;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease;
+}
+
+.community-card .community-details p {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.view-community {
+  color: #ffcc00;
+  text-decoration: none;
+}
+
+.view-community:hover {
+  text-decoration: underline;
+}
+
+/* Chevron Icons */
+.community-card h3 i {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease; /* Smooth transition for icon rotation */
+}
+
+.community-card h3 i.fa-chevron-up {
+  transform: rotate(180deg); /* Rotate icon when the dropdown is open */
+}
+
+.community-card h3 i.fa-chevron-down {
+  transform: rotate(0deg); /* Default state for the icon */
+}
+
+/* Optional: For smoother transition of dropdown visibility */
+.community-details.ng-trigger {
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.community-details.ng-animating {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+  margin-top: 0;
+}
+
+
+
 /* Responsive Styles */
 @media (max-width: 1024px) {
   .dashboard-container {

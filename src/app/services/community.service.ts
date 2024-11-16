@@ -43,7 +43,7 @@ joinCommunity(joinRequest: { userId: string, communityId: string }): Observable<
   
   // Create a new community
   createCommunity(communityData: Community): Observable<Community> {
-    return this.http.post<Community>(this.apiUrl, communityData);
+    return this.http.post<Community>(`${this.apiUrl}/create`, communityData);
   }
 
   // Update a community by ID
