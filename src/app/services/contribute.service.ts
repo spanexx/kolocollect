@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Contribution } from '../models/Contribute';
+import { Community } from '../models/Community';
 
 @Injectable({
   providedIn: 'root'
@@ -26,4 +27,10 @@ export class ContributionService {
   getContributionsByUser(userId: string): Observable<Contribution[]> {
     return this.http.get<Contribution[]>(`${this.apiUrl}/user/${userId}`);
   }
+
+
+  addContribution(contribution: Contribution): Observable<Community> {
+    return this.http.post<Community>('/api/contributions', contribution);
+  }
+  
 }

@@ -6,10 +6,21 @@
     <h1>Contribute to Community</h1>
     <form (ngSubmit)="submitContribution()">
       <label for="amount">Contribution Amount</label>
-      <input type="number" id="amount" [(ngModel)]="contributionAmount" name="amount" required />
+      <input
+        type="number"
+        id="amount"
+        [(ngModel)]="contributionAmount"
+        name="amount"
+        required
+      />
 
       <label for="payment-method">Payment Method</label>
-      <select id="payment-method" [(ngModel)]="paymentMethod" name="paymentMethod" required>
+      <select
+        id="payment-method"
+        [(ngModel)]="paymentMethod"
+        name="paymentMethod"
+        required
+      >
         <option value="" disabled>Select Payment Method</option>
         <option value="Bank Transfer">Bank Transfer</option>
         <option value="Mobile Payment">Mobile Payment</option>

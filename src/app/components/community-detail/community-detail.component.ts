@@ -5,146 +5,127 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommunityService } from '../../services/community.service';
 import { AuthService } from '../../services/auth.service';
 import { Community } from '../../models/Community';
-import { User } from '../../models/User';  // Import User model
+import { User } from '../../models/User';
 import { ContributeFormComponent } from '../contribute-form/contribute-form.component';
+import { Contribution } from '../../models/Contribute';
 
 @Component({
   selector: 'app-community-detail',
   standalone: true,
   imports: [RouterModule, FormsModule, CommonModule, ContributeFormComponent],
   templateUrl: './community-detail.component.html',
-  styleUrls: ['./community-detail.component.css']
+  styleUrls: ['./community-detail.component.css'],
 })
 export class CommunityDetailComponent implements OnInit {
   community?: Community;
   communityId!: string;
-  membersCount: number = 0; 
-  currentUser!: User; 
-  customDate: Date = new Date('2024-11-16'); // Example date
-
-  membersVisible: boolean = false; 
-  showContributeModal: boolean = false; // Flag to control modal visibility
+  membersCount: number = 0;
+  currentUser!: User;
+  membersVisible: boolean = false; // Toggle visibility for members list
+  showContributeModal: boolean = false;
+  hasJoined: boolean = false; // Track if user has already joined
 
   constructor(
     private route: ActivatedRoute,
     private communityService: CommunityService,
     private authService: AuthService,
     private router: Router
-  ) { }
+  ) {}
 
   ngOnInit(): void {
-    this.communityId = this.route.snapshot.paramMap.get('id') ?? '';
-
-    // Get current user from AuthService
-    this.currentUser = this.authService.currentUserValue.user;
-    console.log(this.currentUser.id);
-
-    // If no current user, redirect to sign-in
-    if (!this.currentUser) {
-      console.error('User is not logged in. Redirecting to sign-in.');
-      this.router.navigate(['/sign-in']);
-      return;
-    }
-
-    const storedCommunity = localStorage.getItem('community');
-    if (storedCommunity) {
-      // If a community is already in local storage, load it
-      const parsedCommunity = JSON.parse(storedCommunity);
-      // Check if the communityId from the route matches the stored one
-      if (parsedCommunity?._id === this.communityId) {
-        this.community = parsedCommunity;
-        this.updateMembersCount(); // Update the members count based on local storage
-      } else {
-        // If the communityId doesn't match, fetch it from the API
+    this.route.paramMap.subscribe((params) => {
+      const newCommunityId = params.get('id');
+      if (newCommunityId !== this.communityId) {
+        this.communityId = newCommunityId || '';
         this.loadCommunityDetails();
       }
-    } else {
-      // If there's no community in local storage, fetch it from the API
-      this.loadCommunityDetails();
+    });
+
+    this.currentUser = this.authService.currentUserValue?.user;
+    if (!this.currentUser) {
+      this.router.navigate(['/sign-in']);
     }
   }
 
   loadCommunityDetails(): void {
-    if (!this.communityId) {
-      console.error('Community ID is missing');
-      return;
-    }
-
+    if (!this.communityId) return;
+  
     this.communityService.getCommunityById(this.communityId).subscribe(
       (community) => {
-        console.log('Community details returned from API:', community);
-        
         this.community = community;
-        this.updateMembersCount(); // Update members count after loading from API
-
-        // Save community to local storage
+        this.updateMembersCount();
+        this.hasJoined = this.community.membersList?.some(
+          (member) => member.userId === this.currentUser.id
+        );
         localStorage.setItem('community', JSON.stringify(this.community));
       },
       (error) => {
         console.error('Error fetching community details:', error);
+        alert('Failed to load community details. Please try again later.');
       }
     );
   }
+  
 
-  // Method to calculate and update the members count
   updateMembersCount(): void {
     if (this.community) {
       this.membersCount = this.community.membersList?.length || 0;
     }
   }
 
+  goToCommunitySettings(): void {
+    this.router.navigate(['/community', this.communityId, 'settings']);
+  }
+
+  toggleMembers(): void {
+    this.membersVisible = !this.membersVisible;
+  }
+
   joinCommunity(): void {
-    if (!this.authService.isLoggedIn()) {
-      console.error('User is not logged in. Redirecting to sign-in.');
-      this.router.navigate(['/sign-in'], { queryParams: { redirectUrl: this.router.url } });
+    if (this.hasJoined) {
+      alert('You are already a member of this community.');
       return;
     }
   
-    const currentUserId = this.authService.currentUserValue?.user?.id;
-
-    console.log('Current user ID:', currentUserId);
-    console.log('Current community ID:', this.communityId);
-  
-    if (!currentUserId || !this.communityId) {
-      console.error('Missing user ID or community ID.');
+    if (!this.currentUser?.id) {
+      alert('User ID is not available. Please log in again.');
       return;
     }
   
     const joinRequest = {
-      userId: currentUserId,
-      communityId: this.communityId
+      userId: this.currentUser.id, // Ensure currentUser.id is defined
+      communityId: this.communityId,
     };
   
-    this.communityService.joinCommunity(joinRequest).subscribe({
-      next: (response) => {
-        console.log('Successfully joined community:', response);
-        this.loadCommunityDetails();  // Reload community details after joining
+    this.communityService.joinCommunity(joinRequest).subscribe(
+      () => {
+        this.hasJoined = true;
+        this.loadCommunityDetails(); // Refresh details after joining
+        alert('You have successfully joined the community!');
       },
-      error: (error) => {
-        if (error.status === 401 && error.message.includes("Cycle lock is enabled")) {
-          alert(error.message);
-        } else {
-          console.error("Error joining community:", error);
-        }
+      (error) => {
+        console.error('Error joining community:', error);
+        alert('Failed to join the community. Please try again later.');
       }
-    });
+    );
   }
-
-  goToCommunitySettings(): void {
-    this.router.navigate([`/community/${this.communityId}/settings`]);
-  }
-
-  // Modified to open the modal instead of navigating to a new route
+  
   goToContributeForm(): void {
-    this.showContributeModal = true; // Show the modal when the contribute button is clicked
+    this.showContributeModal = true;
   }
 
-  // Method to close the modal
   closeContributeModal(): void {
-    this.showContributeModal = false; // Hide the modal when closing
+    this.showContributeModal = false;
+    this.loadCommunityDetails(); // Reload to reflect changes
   }
 
-  toggleMembers() {
-    this.membersVisible = !this.membersVisible;
+  handleContribution(contribution: Contribution): void {
+    this.communityService.addContribution(contribution).subscribe(
+      () => alert('Contribution added successfully!'),
+      (error) => {
+        console.error('Error adding contribution:', error);
+        alert('Failed to add contribution. Please try again later.');
+      }
+    );
   }
 }

@@ -17,8 +17,6 @@ exports.joinCommunity = async (req, res) => {
     const { communityId } = req.params;
     const { userId } = req.body;
 
-    console.log("Join request received:", { userId, communityId });
-
     if (!communityId || !userId) {
       return res.status(400).json({ message: 'Missing required communityId or userId' });
     }
@@ -29,7 +27,6 @@ exports.joinCommunity = async (req, res) => {
     if (!community) return res.status(404).json({ message: 'Community not found' });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Skip cycle lock check here for joining
     if (community.members >= community.maxMembers) {
       return res.status(400).json({ message: 'Community has reached its maximum number of members' });
     }
@@ -44,6 +41,7 @@ exports.joinCommunity = async (req, res) => {
     if (!user.communities.includes(communityId)) {
       user.communities.push(communityId);
     }
+
     await community.save();
     await user.save();
 
@@ -78,7 +76,7 @@ exports.createCommunity = async (req, res) => {
       nextPayout,
       isPrivate = false,
       contributionLimit = 1000,
-      userId,       // Include userId, name, and email in request body
+      userId,
       userName,
       userEmail,
     } = req.body;
@@ -97,13 +95,9 @@ exports.createCommunity = async (req, res) => {
       nextPayout,
       isPrivate,
       contributionLimit,
-      adminId: userId, // Assign userId as adminId
-      membersList: [{
-        userId,
-        name: userName,
-        email: userEmail,
-      }],
-      members: 1, // Initial members count includes the admin
+      adminId: userId,
+      membersList: [{ userId, name: userName, email: userEmail }],
+      members: 1,
     });
 
     await newCommunity.save();
@@ -121,22 +115,43 @@ exports.createCommunity = async (req, res) => {
   }
 };
 
-// Update a community
+// Update a community dynamically
 exports.updateCommunity = async (req, res) => {
   try {
     const { id } = req.params;
-    const { maxMembers, contributionFrequency, cycleLockEnabled, backupFund } = req.body;
+    const updateFields = req.body;
 
-    // Validate if required fields are provided
-    if (maxMembers || contributionFrequency || cycleLockEnabled || backupFund) {
-      const updatedCommunity = await Community.findByIdAndUpdate(id, req.body, { new: true });
-      if (!updatedCommunity) return res.status(404).json({ message: "Community not found" });
-      res.json(updatedCommunity);
-    } else {
-      return res.status(400).json({ message: 'No valid fields provided to update' });
+    if (!Object.keys(updateFields).length) {
+      return res.status(400).json({ message: 'No fields provided to update' });
     }
+
+    const updatedCommunity = await exports.updateCommunityFields(id, updateFields);
+
+    res.status(200).json({
+      message: 'Community updated successfully',
+      community: updatedCommunity,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error updating community:', err);
+    res.status(500).json({ message: 'Error updating community', error: err.message });
+  }
+};
+
+// Helper function to update specific fields in a community
+exports.updateCommunityFields = async (communityId, updateFields) => {
+  try {
+    const updatedCommunity = await Community.findByIdAndUpdate(
+      communityId,
+      { $set: updateFields },
+      { new: true } // Returns the updated document
+    );
+    if (!updatedCommunity) {
+      throw new Error('Community not found');
+    }
+    return updatedCommunity;
+  } catch (err) {
+    console.error('Error updating community fields:', err);
+    throw err;
   }
 };
 

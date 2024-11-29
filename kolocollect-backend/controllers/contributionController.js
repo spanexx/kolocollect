@@ -1,5 +1,7 @@
 const Contribution = require('../models/Contribution');
 const Community = require('../models/Community');
+const { updateCommunity } = require('./communityController');
+
 
 // Get all contributions
 exports.getContributions = async (req, res) => {
@@ -26,64 +28,47 @@ exports.getContributionById = async (req, res) => {
 
 // Create a new contribution
 exports.createContribution = async (req, res) => {
-  const { userId, communityId, amount, status, date, paymentMethod } = req.body;
-
-  // Validation: Ensure required fields are present
-  if (!userId || !communityId || !amount || !date || !paymentMethod) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
-
   try {
-    // Optional: Check for duplicate contributions
-    const existingContribution = await Contribution.findOne({ userId, communityId, date });
-    if (existingContribution) {
-      return res.status(400).json({ message: 'Contribution already exists for this date' });
+    const { userId, communityId, amount, contributionDate, paymentMethod } = req.body;
+
+    if (!userId || !communityId || !amount || !paymentMethod) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Create new contribution
-    const newContribution = new Contribution({
-      userId,
-      communityId,
-      amount,
-      status: status || 'pending', // Default status
-      date,
-      paymentMethod,
-    });
-
-    await newContribution.save();
-
-    // Update the corresponding community
     const community = await Community.findById(communityId);
+
     if (!community) {
       return res.status(404).json({ message: 'Community not found' });
     }
 
-    // Calculate 10% for backup fund and 90% for community available balance
-    const backupAmount = amount * 0.1;
-    const availableAmount = amount * 0.9;
+    // Create the contribution
+    const newContribution = new Contribution({
+      userId,
+      communityId,
+      amount,
+      contributionDate,
+      paymentMethod,
+      status: 'Completed',
+    });
+    await newContribution.save();
 
-    community.contributions += amount; // Increment total contributions
-    community.backupFund += backupAmount; // Add 10% to the backup fund
-    community.availableBalance += availableAmount; // Add 90% to available balance
-
-    // Update the member's contributionsPaid
-    const member = community.membersList.find((m) => m.userId.equals(userId));
-    if (member) {
-      member.contributionsPaid += amount; // Update the member's contributionsPaid
-    } else {
-      return res.status(404).json({ message: 'User not found in community members list' });
-    }
-
+    // Update the community
+    community.totalContributions = (community.totalContributions || 0) + amount;
+    community.contributionList = [
+      ...(community.contributionList || []),
+      {
+        userId,
+        amount,
+        contributionDate,
+        paymentMethod,
+      },
+    ];
     await community.save();
 
-    res.status(201).json({
-      message: 'Contribution created successfully and community updated',
-      contribution: newContribution,
-      updatedCommunity: community,
-    });
+    res.status(201).json({ message: 'Contribution created successfully', contribution: newContribution });
   } catch (err) {
-    console.error('Error saving contribution:', err.message);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Error creating contribution:', err);
+    res.status(500).json({ message: 'Error creating contribution', error: err.message });
   }
 };
 
