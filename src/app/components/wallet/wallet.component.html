@@ -1,1 +1,96 @@
-<p>wallet works!</p>
+<div class="wallet-container">
+  <h1 class="page-title">Wallet</h1>
+
+  <div class="wallet-summary">
+    <div class="balance-actions">
+      <p class="balance">Balance: {{ walletBalance | currency }}</p>
+      <div class="wallet-buttons">
+        <button routerLink="/add-funds" class="cta add-funds-btn">Add Funds</button>
+        <button routerLink="/withdraw-fund" class="cta withdraw-btn">Withdraw Funds</button>
+      </div>
+    </div>
+
+    <div class="transaction-history">
+      <h3>Transaction History</h3>
+      <label for="transaction-filter">Filter by Type:</label>
+      <select id="transaction-filter" [(ngModel)]="filterType" (change)="filterTransactions()">
+        <option value="all">All</option>
+        <option value="deposit">Deposit</option>
+        <option value="withdrawal">Withdrawal</option>
+        <option value="fixed">Fix</option>
+        <option value="transfer">Transfer</option>
+      </select>
+
+      <table *ngIf="filteredTransactions.length > 0; else noTransactions">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let transaction of filteredTransactions">
+            <td>{{ transaction.date | date }}</td>
+            <td>{{ transaction.amount | currency }}</td>
+            <td>{{ transaction.type }}</td>
+            <td>{{ transaction.description }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noTransactions>
+        <p class="no-data-message">No transactions available for the selected filter.</p>
+      </ng-template>
+    </div>
+
+  </div>
+
+  <div class="wallet-actions">
+    <div class="fund-management">
+      <button class="cta" (click)="toggleFixForm()">Fix Funds</button>
+      <div *ngIf="showFixForm" class="fund-form">
+        <label for="fixAmount">Amount to Fix:</label>
+        <input
+          id="fixAmount"
+          type="number"
+          [(ngModel)]="fixedAmount"
+          placeholder="Enter amount"
+          min="0"
+        />
+        <label for="fixDuration">Duration (Days):</label>
+        <input
+          id="fixDuration"
+          type="number"
+          [(ngModel)]="fixDuration"
+          placeholder="Enter duration"
+          min="1"
+        />
+        <button class="cta submit-btn" (click)="fixFunds()">Submit</button>
+        <button class="cta cancel-btn" (click)="showFixForm = false">Cancel</button>
+      </div>
+    </div>
+
+    <div class="transfer-management">
+      <button class="cta" (click)="toggleTransferForm()">Transfer Funds</button>
+      <div *ngIf="showTransferForm" class="fund-form">
+        <label for="recipientId">Recipient ID:</label>
+        <input
+          id="recipientId"
+          [(ngModel)]="recipientId"
+          placeholder="Enter recipient ID"
+        />
+        <label for="transferAmount">Amount to Transfer:</label>
+        <input
+          id="transferAmount"
+          type="number"
+          [(ngModel)]="transferAmount"
+          placeholder="Enter amount"
+          min="0"
+        />
+        <button class="cta submit-btn" (click)="transferFunds()">Submit</button>
+        <button class="cta cancel-btn" (click)="showTransferForm = false">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

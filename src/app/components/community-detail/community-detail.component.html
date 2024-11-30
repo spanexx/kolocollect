@@ -41,7 +41,7 @@
     <div *ngIf="membersVisible" class="members-list">
       <ul>
         <li *ngFor="let member of community.membersList">
-          <strong>{{ member.name }}</strong> (<span>{{ member.email }}</span>)
+          <strong>{{ member.name }}</strong> <span>{{ member.email }}</span> 
           <br />
           Contributions Paid: {{ member.contributionsPaid?.total || 0 | currency }}
         </li>

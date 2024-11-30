@@ -2,15 +2,35 @@
   <!-- Welcome Section -->
   <div class="welcome-section">
     <h1>Welcome, {{ user?.name }}!</h1>
-    <p>Here’s an overview of your contributions and savings progress.</p>
+    <p>Here’s an overview of your contributions, savings progress, and wallet balance.</p>
   </div>
 
+  <!-- Wallet Section -->
+  <div class="wallet-section">
+    <div class="wallet-details">
+      <p>Balance: {{ walletBalance | currency }}</p>
+      <button (click)="viewWalletDetails()" class="cta">View Wallet Details</button>
+      <button (click)="addFunds()" class="cta-add">Add Funds</button>
+
+    </div>
+
+    <div class="recent-transactions" *ngIf="recentTransactions.length > 0">
+      <h3>Recent Transactions</h3>
+      <ul>
+        <li *ngFor="let transaction of recentTransactions">
+          {{ transaction.date | date: 'short' }} - {{ transaction.type }} - {{ transaction.amount | currency }}
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Notification Toggle -->
   <div class="notification-toggle" (click)="toggleNotifications()">
     <span class="notification-icon" [ngClass]="unreadNotificationsCount > 0 ? 'has-notification' : 'no-notification'">
-      <i class="fa fa-bell"></i> <!-- Font Awesome Bell Icon -->
+      <i class="fa fa-bell"></i>
     </span>
   </div>
-  
 
   <!-- Quick Stats Section -->
   <div class="quick-stats">

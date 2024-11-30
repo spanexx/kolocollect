@@ -309,6 +309,70 @@
 }
 
 
+/* Wallet Section */
+.wallet-section {
+  margin-bottom: 40px;
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.wallet-section h2 {
+  font-size: 1.8rem;
+  color: #4b5320;
+  margin-bottom: 20px;
+}
+
+.wallet-details {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.wallet-details p {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.recent-transactions {
+  margin-top: 20px;
+}
+
+.recent-transactions h3 {
+  font-size: 1.5rem;
+  color: #4b5320;
+  margin-bottom: 10px;
+}
+
+.recent-transactions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recent-transactions li {
+  background-color: white;
+  padding: 10px 20px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Button for adding funds */
+.cta-add {
+  background-color: #4b5320;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.cta-add:hover {
+  background-color: #3e4a1b;
+}
+
+
+
 
 /* Responsive Styles */
 @media (max-width: 1024px) {

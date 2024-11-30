@@ -1,0 +1,366 @@
+.wallet-container {
+    padding: 20px 40px;
+    background-color: #f7f7f7;
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    box-sizing: border-box;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    color: #4b5320;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .wallet-details {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .wallet-details p {
+    font-size: 1.2rem;
+    color: #666;
+  }
+
+  .wallet-summary {
+    background-color: #ffffff; /* Background color for the wallet section */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+  }
+  
+  .balance-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .balance {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #4b5320;
+    margin: 0;
+  }
+  
+  .wallet-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Increased gap between buttons */
+  }
+  
+  .cta {
+    padding: 12px 25px; /* Larger padding for buttons */
+    font-size: 1.2rem;
+    border-radius: 8px; /* Rounded corners for buttons */
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    width: auto; /* Prevent full width */
+  }
+  
+  .add-funds-btn {
+    background-color: #28a745; /* Green for add funds */
+    color: white;
+    border: none;
+  }
+  
+  .add-funds-btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px); /* Hover effect */
+  }
+  
+  .withdraw-btn {
+    background-color: #dc3545; /* Red for withdraw funds */
+    color: white;
+    border: none;
+  }
+  
+  .withdraw-btn:hover {
+    background-color: #c82333;
+    transform: translateY(-2px); /* Hover effect */
+  }
+
+  
+  h3 {
+    font-size: 1.8rem;
+    color: #4b5320;
+    margin-bottom: 10px;
+  }
+  
+  label {
+    font-size: 1rem;
+    color: #666;
+    margin-right: 10px;
+  }
+  
+  select {
+    padding: 8px;
+    font-size: 1rem;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 250px;
+    margin-top: 5px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+  }
+  
+  th, td {
+    padding: 10px;
+    text-align: left;
+    font-size: 1rem;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  th {
+    background-color: #f2f2f2;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  ul li {
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-size: 1rem;
+  }
+  
+  .cta {
+    padding: 10px 20px;
+    background-color: #4b5320;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: center;
+    display: inline-block;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    width: auto; /* Prevent full width, give them space to breathe */
+    margin: 10px 5px; /* Add some margin between buttons */
+  }
+  
+  .cta:hover {
+    background-color: #3e4422;
+    transform: translateY(-2px); /* Subtle hover effect */
+  }
+  
+  .add-funds-btn, .withdraw-btn {
+    width: auto; /* Allow buttons to only take up the space they need */
+  }
+  
+  .fix-fund-container, .transfer-fund-container {
+    margin-top: 30px;
+  }
+  
+  .fix-fund-form, .transfer-fund-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  input {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  button.cancel-btn {
+    background-color: #f44336;
+    color: white;
+    padding: 10px 20px;
+  }
+  
+  button.cancel-btn:hover {
+    background-color: #d32f2f;
+  }
+  
+  button.transfer-btn, button.fix-fund-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+  }
+  
+  button.transfer-btn:hover, button.fix-fund-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  button.cancel-btn {
+    background-color: #f44336;
+  }
+  
+  button.cancel-btn:hover {
+    background-color: #d32f2f;
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 1024px) {
+    .wallet-container {
+      padding: 20px;
+    }
+  
+    .wallet-details p {
+      font-size: 1.1rem;
+    }
+  
+    .cta {
+      font-size: 1rem;
+      padding: 10px 20px;
+    }
+  
+    .add-funds-btn, .withdraw-btn {
+      width: auto; /* Allow buttons to take only the necessary space */
+    }
+  
+    input {
+      font-size: 1rem;
+      padding: 8px;
+    }
+  
+    select {
+      font-size: 1rem;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+  
+    table th, table td {
+      font-size: 0.9rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2rem;
+    }
+  
+    h3 {
+      font-size: 1.6rem;
+    }
+  
+    .wallet-container {
+      padding: 15px;
+    }
+  
+    .wallet-details {
+      gap: 20px;
+    }
+
+    .wallet-summary {
+      padding: 15px;
+    }
+  
+    .balance-actions {
+      gap: 10px;
+    }
+  
+    .cta {
+      font-size: 1rem;
+      padding: 10px 20px;
+    }
+  
+    .wallet-buttons {
+      gap: 10px;
+    }
+  
+    select {
+      font-size: 1rem;
+      padding: 10px;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+  
+    table th, table td {
+      font-size: 0.85rem;
+    }
+  
+    .cta {
+      font-size: 1rem;
+      padding: 10px 20px;
+    }
+  
+    .add-funds-btn, .withdraw-btn {
+      width: auto;
+    }
+  
+    input {
+      font-size: 1rem;
+      padding: 10px;
+    }
+  
+    ul li {
+      font-size: 0.9rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 1.8rem;
+    }
+  
+    h3 {
+      font-size: 1.4rem;
+    }
+  
+    .wallet-container {
+      padding: 10px;
+    }
+  
+    .wallet-details {
+      gap: 15px;
+    }
+
+    .wallet-summary {
+      padding: 10px;
+    }
+  
+    .cta {
+      font-size: 0.9rem;
+      padding: 8px 15px;
+    }
+  
+    .wallet-buttons {
+      gap: 8px;
+    }
+  
+    select {
+      font-size: 1rem;
+      padding: 8px;
+      width: 100%;
+    }
+  
+    table th, table td {
+      font-size: 0.8rem;
+    }
+  
+    .cta {
+      font-size: 0.9rem;
+      padding: 8px 15px; /* Slightly smaller padding on mobile */
+    }
+  
+    .add-funds-btn, .withdraw-btn {
+      width: auto; /* Maintain compact button sizes */
+    }
+  
+    input {
+      font-size: 1rem;
+      padding: 8px;
+    }
+  
+    ul li {
+      font-size: 0.85rem;
+    }
+  }
+  

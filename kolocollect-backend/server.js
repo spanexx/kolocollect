@@ -7,6 +7,8 @@ const userRoutes = require('./routes/userRoutes');
 const contributionRoutes = require('./routes/contributionRoutes');
 const communityRoutes = require('./routes/communityRoutes');
 const payoutRoutes = require('./routes/payoutRoutes');
+const walletRoutes = require('./routes/walletRoutes');
+
 
 
 
@@ -37,6 +39,8 @@ app.use('/api/contributions', contributionRoutes);
 app.use('/api/payouts', payoutRoutes);
 
 app.use('/api/users', userRoutes);
+
+app.use('/api/wallet', walletRoutes);
 
 
 

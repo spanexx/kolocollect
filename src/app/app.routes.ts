@@ -14,6 +14,9 @@ import { AboutComponent } from './components/about/about.component';
 import { CreateCommunityComponent } from './components/create-community/create-community.component';
 import { CommunitySettingsComponent } from './components/community-settings/community-settings.component';
 import { ContributeFormComponent } from './components/contribute-form/contribute-form.component';
+import { AddFundsComponent } from './components/wallet/add-funds/add-funds.component';
+import { WithdrawFundComponent } from './components/wallet/withdraw-fund/withdraw-fund.component';
+import { WalletComponent } from './components/wallet/wallet.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
@@ -30,6 +33,8 @@ export const routes: Routes = [
   { path: 'community/:id', component: CommunityDetailComponent, canActivate: [authGuard] },  
   { path: 'community/:id/settings', component: CommunitySettingsComponent, canActivate: [authGuard] },
   { path: 'community/:id/contribute', component: ContributeFormComponent },
-
+  { path: 'wallet', component: WalletComponent },
+  { path: 'add-funds', component: AddFundsComponent },
+  { path: 'withdraw-fund', component: WithdrawFundComponent },
 
 ];

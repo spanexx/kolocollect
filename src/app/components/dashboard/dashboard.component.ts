@@ -6,6 +6,7 @@ import { User } from '../../models/User';
 import { Community } from '../../models/Community';
 import { AuthService } from '../../services/auth.service';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { WalletService } from '../../services/wallet.service';
 
 
 @Component({
@@ -33,16 +34,15 @@ export class DashboardComponent implements OnInit {
   totalContributions: number = 0;
   totalSavings: number = 0;
   upcomingPayout: Date | null = null;
+  walletBalance: number = 0;
+  recentTransactions: { date: string, amount: number, type: string }[] = [];
 
   recentActivities: string[] = [];
   savingsGoals: { name: string; progress: number }[] = [];
   userCommunities: Community[] = [];
-  showNotifications = false; 
+  showNotifications = false;
   unreadNotificationsCount = 5;
-
-
   openCommunityId: string | null = null; // Track which community is open
-
 
   communityNotifications = [
     "New member joined your community",
@@ -50,69 +50,71 @@ export class DashboardComponent implements OnInit {
     "Reminder: Contribution due in 3 days"
   ];
 
-
   constructor(
-    private authService: AuthService, 
-    private router: Router
+    private authService: AuthService,
+    private router: Router,
+    private walletService: WalletService
+
   ) {}
+
   ngOnInit(): void {
-    // Get the current user from AuthService
     const currentUser = this.authService.currentUserValue?.user;
-    console.log('Current User:', currentUser);  // Log the current user data
-    
     if (currentUser) {
-      // Set user data from AuthService
       this.user = currentUser;
       this.totalContributions = currentUser.contributions ? currentUser.contributions.length : 0;
       this.totalSavings = currentUser.totalSavings || 0;
       this.upcomingPayout = currentUser.upcomingPayout || null;
       this.recentActivities = currentUser.recentActivities || [];
       this.savingsGoals = currentUser.savingsGoals || [];
-  
-      // Pass the user ID to get the communities
+      this.recentTransactions = currentUser.recentTransactions || [];
+
+      // Fetch wallet balance
+      this.walletService.getWalletBalance(currentUser.id).subscribe(
+        (response) => {
+          this.walletBalance = response.walletBalance; // Update wallet balance
+        },
+        (error) => {
+          console.error('Error fetching wallet balance:', error);
+        }
+      );
+
+      // Fetch user's communities
       this.authService.getUserCommunities(currentUser.id).subscribe(
         (communities) => {
           this.userCommunities = communities;
           this.totalCommunities = this.userCommunities.length;
-          console.log('User Communities:', this.userCommunities);  // Log the fetched communities
         },
-        (error) => {
-          console.error('Error fetching communities:', error);  // Log any errors
-        }
+        (error) => console.error('Error fetching communities:', error)
       );
-
-      
     } else {
       console.error('User is not logged in. Redirecting to login.');
       this.router.navigate(['/login']);
     }
-
-    
   }
-  
 
+  // Toggle notifications
+  toggleNotifications() {
+    this.showNotifications = !this.showNotifications;
+  }
+
+  // Toggle community details visibility
+  toggleCommunityDetails(communityId: string) {
+    this.openCommunityId = this.openCommunityId === communityId ? null : communityId;
+  }
+
+  // Navigate to create a new community
   createCommunity() {
     this.router.navigate(['/create-community']);
   }
 
-    // Method to toggle notifications
-    toggleNotifications() {
-      this.showNotifications = !this.showNotifications;
-    }
-
-
-    // Toggle community details visibility
-  toggleCommunityDetails(communityId: string) {
-    if (this.openCommunityId === communityId) {
-      this.openCommunityId = null; // Close if already open
-    } else {
-      this.openCommunityId = communityId; // Open the clicked community
-    }
+  // Navigate to wallet details page
+  viewWalletDetails() {
+    this.router.navigate(['/wallet']);
   }
 
-  // Check if a community is open
-  isCommunityOpen(communityId: string): boolean {
-    return this.openCommunityId === communityId;
-  }
+  // Method to add funds (mock)
+  addFunds() {
+    this.router.navigate(['/add-funds']);
 
+  }
 }
