@@ -1,0 +1,146 @@
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+.contact-us-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.contact-us-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+h1 {
+    color: #646F3F;  /* Consistent header color */
+    font-size: 2.5rem;
+}
+
+h2 {
+    color: #646F3F;  /* Consistent subheader color */
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+p {
+    color: #6b7280;
+    font-size: 1rem;
+}
+
+.contact-form-section, .contact-details-section, .location-section {
+    background: #fff;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group label {
+    color: #646F3F;  /* Label color match */
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+    border-color: #646F3F;  /* Match focus color */
+    outline: none;
+    box-shadow: 0 0 3px rgba(100, 111, 63, 0.5); /* Match focus color */
+}
+
+.submit-btn {
+    padding: 12px 20px;
+    background-color: #646F3F;  /* Button background color match */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.submit-btn:hover {
+    background-color: #535d30;  /* Darker shade of green */
+}
+
+.contact-details-list, .social-media-links {
+    list-style: none;
+    padding: 0;
+}
+
+.contact-details-list li {
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.contact-details-list a {
+    color: #646F3F;  /* Link color match */
+    text-decoration: none;
+}
+
+.contact-details-list a:hover {
+    text-decoration: underline;
+}
+
+.social-media-links li {
+    display: inline;
+    margin-right: 10px;
+}
+
+.map-container iframe {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .contact-form {
+        gap: 15px;
+    }
+
+    .submit-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .contact-us-container {
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+    }
+}

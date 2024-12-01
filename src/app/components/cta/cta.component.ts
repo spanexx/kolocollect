@@ -1,9 +1,10 @@
 import { AfterViewInit, Component, ElementRef } from '@angular/core';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-cta',
   standalone: true,
-  imports: [],
+  imports: [RouterModule],
   templateUrl: './cta.component.html',
   styleUrl: './cta.component.css'
 })

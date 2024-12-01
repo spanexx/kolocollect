@@ -17,10 +17,12 @@ import { ContributeFormComponent } from './components/contribute-form/contribute
 import { AddFundsComponent } from './components/wallet/add-funds/add-funds.component';
 import { WithdrawFundComponent } from './components/wallet/withdraw-fund/withdraw-fund.component';
 import { WalletComponent } from './components/wallet/wallet.component';
+import { ContactComponent } from './components/contact/contact.component';
 
 export const routes: Routes = [
   { path: '', component: HomepageComponent },
   { path: 'about', component: AboutComponent },
+  { path: 'contact', component: ContactComponent },
   { path: 'join-community', component: JoinCommunityComponent, canActivate: [authGuard] },
   { path: 'contribute', component: ContributeComponent, canActivate: [authGuard] }, // Protected route
   { path: 'receive-payout', component: ReceivePayoutComponent, canActivate: [authGuard] },  // Protected route
@@ -36,5 +38,6 @@ export const routes: Routes = [
   { path: 'wallet', component: WalletComponent },
   { path: 'add-funds', component: AddFundsComponent },
   { path: 'withdraw-fund', component: WithdrawFundComponent },
+
 
 ];
