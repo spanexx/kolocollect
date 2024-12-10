@@ -7,6 +7,8 @@ import { Community } from '../../models/Community';
 import { AuthService } from '../../services/auth.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { WalletService } from '../../services/wallet.service';
+import { CommunityService } from '../../services/community.service';
+import { UserService } from '../../services/user.service';
 
 
 @Component({
@@ -52,8 +54,10 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private userService: UserService,
     private router: Router,
-    private walletService: WalletService
+    private walletService: WalletService,
+    private communityService: CommunityService
 
   ) {}
 
@@ -71,21 +75,34 @@ export class DashboardComponent implements OnInit {
       // Fetch wallet balance
       this.walletService.getWalletBalance(currentUser.id).subscribe(
         (response) => {
-          this.walletBalance = response.walletBalance; // Update wallet balance
+          this.walletBalance = response.availableBalance;
         },
         (error) => {
-          console.error('Error fetching wallet balance:', error);
+          if (error.status === 404) {
+            console.error('Wallet not found. Please check the user setup.');
+          } else {
+            console.error('Error fetching wallet balance:', error);
+          }
         }
       );
 
       // Fetch user's communities
-      this.authService.getUserCommunities(currentUser.id).subscribe(
+      
+      this.userService.getUserCommunities().subscribe(
         (communities) => {
-          this.userCommunities = communities;
+          this.userCommunities = communities.communities;
           this.totalCommunities = this.userCommunities.length;
+          
         },
-        (error) => console.error('Error fetching communities:', error)
+        (error) => {
+          if (error.status === 404) {
+            console.error('No communities found for user.');
+          } else {
+            console.error('Error fetching communities:', error);
+          }
+        }
       );
+
     } else {
       console.error('User is not logged in. Redirecting to login.');
       this.router.navigate(['/login']);

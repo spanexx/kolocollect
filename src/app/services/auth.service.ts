@@ -13,56 +13,45 @@ export class AuthService {
   public currentUser: Observable<any>;
 
   constructor(private http: HttpClient) {
-    // Initialize currentUser from localStorage
     const storedUser = JSON.parse(localStorage.getItem('currentUser')!);
     this.currentUserSubject = new BehaviorSubject<any>(storedUser);
     this.currentUser = this.currentUserSubject.asObservable();
   }
 
-  // Register a new user
   register(name: string, email: string, password: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/register`, { name, email, password });
   }
 
-  // Login user and store details in localStorage
   login(email: string, password: string): Observable<any> {
-    console.log('Login request data:', { email, password }); // Log request data
     return this.http.post<any>(`${this.apiUrl}/login`, { email, password }).pipe(
       map(user => {
-        console.log('Login response:', user); // Log response data
         if (user && user.token) {
-          // Save user object and token in localStorage
           localStorage.setItem('currentUser', JSON.stringify(user));
           localStorage.setItem('userId', user.user.id);
           localStorage.setItem('userName', user.user.name);
           localStorage.setItem('userEmail', user.user.email);
-  
-          // Set user in BehaviorSubject
+
+          // Add wallet information to storage
+          localStorage.setItem('walletBalance', user.wallet.availableBalance);
+          localStorage.setItem('walletFixed', user.wallet.fixedBalance);
+          localStorage.setItem('walletTotal', user.wallet.totalBalance);
+
           this.currentUserSubject.next(user);
-  
         }
         return user;
       })
     );
   }
-  
 
-  // Logout user and clear localStorage
   logout(): void {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
+    localStorage.clear();
     this.currentUserSubject.next(null);
   }
 
-  // Get the current logged-in user's ID
   getUserId(): string | null {
-    return this.currentUserSubject.value?.user?._id || null;
+    return this.currentUserSubject.value?.user?.id || null;
   }
-  
 
-  // Check if the user is logged in
   isLoggedIn(): boolean {
     return !!this.currentUserSubject.value;
   }
@@ -71,7 +60,7 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  getUserCommunities(userId: string) {
+  getUserCommunities(userId: string): Observable<Community[]> {
     return this.http.get<Community[]>(`${this.apiUrl}/${userId}/communities`);
   }
 }

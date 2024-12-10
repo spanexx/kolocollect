@@ -1,14 +1,54 @@
 <div class="add-funds-container">
-    <h2>Add Funds</h2>
-  
-    <form (ngSubmit)="addFunds()">
+  <h2>Add Funds</h2>
+  <p class="description">Add funds to your wallet securely using your card.</p>
+
+  <form (ngSubmit)="addFunds()" class="add-funds-form">
+    <div class="form-group">
       <label for="amount">Amount:</label>
-      <input type="number" [(ngModel)]="amount" name="amount" id="amount" required />
-  
+      <input
+        type="number"
+        [(ngModel)]="amount"
+        name="amount"
+        id="amount"
+        required
+        placeholder="Enter amount"
+        min="1"
+      />
+      <small *ngIf="amount <= 0" class="error-text">Amount must be greater than zero.</small>
+    </div>
+
+    <div class="form-group">
       <label for="description">Description:</label>
-      <input type="text" [(ngModel)]="description" name="description" id="description" required />
-  
-      <button type="submit">Add Funds</button>
-    </form>
-  </div>
-  
+      <input
+        type="text"
+        [(ngModel)]="description"
+        name="description"
+        id="description"
+        required
+        placeholder="Reason for adding funds"
+      />
+    </div>
+
+    <div id="card-element" class="form-group">
+      <!-- Stripe's card element will be injected here -->
+    </div>
+    <div id="card-errors" role="alert" class="card-errors"></div>
+
+    <div class="form-group">
+      <div
+        id="hcaptcha-container"
+        class="hcaptcha"
+        [attr.data-sitekey]="hCaptchaSiteKey"
+      ></div>
+      <small *ngIf="hCaptchaError" class="error-text">Please verify you are human.</small>
+    </div>
+
+    <button
+      type="submit"
+      class="cta-add"
+      [disabled]="loading || amount <= 0 || !description || !captchaVerified"
+    >
+      {{ loading ? 'Processing...' : 'Add Funds' }}
+    </button>
+  </form>
+</div>

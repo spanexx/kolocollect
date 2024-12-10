@@ -13,4 +13,10 @@ export interface User {
     name: string;
     progress: number;
   }[];
+  walletBalance: number;            // User's wallet balance
+  walletTransactions: {             // Array to track wallet deposits and withdrawals
+    amount: number;
+    date: Date;
+    type: 'deposit' | 'withdrawal'; // Type of transaction
+  }[];
 }

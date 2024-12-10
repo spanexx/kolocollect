@@ -8,9 +8,8 @@ const contributionRoutes = require('./routes/contributionRoutes');
 const communityRoutes = require('./routes/communityRoutes');
 const payoutRoutes = require('./routes/payoutRoutes');
 const walletRoutes = require('./routes/walletRoutes');
-
-
-
+const stripeRoutes = require('./routes/stripeRoutes');
+const webhookMiddleware = require('./middlewares/webhookMiddleware');
 
 dotenv.config();
 
@@ -30,20 +29,25 @@ app.use((req, res, next) => {
   next();
 });
 
-
 // Routes
 app.use('/api/communities', communityRoutes);
-
 app.use('/api/contributions', contributionRoutes);
-
 app.use('/api/payouts', payoutRoutes);
-
 app.use('/api/users', userRoutes);
-
 app.use('/api/wallet', walletRoutes);
+app.use('/api/stripe', stripeRoutes);
 
-
-
+app.use(
+  '/webhook',
+  bodyParser.raw({ type: 'application/json' }), // Use raw body for Stripe webhooks
+  webhookMiddleware,
+  (req, res) => {
+    const event = req.stripeEvent;
+    // Handle the event type (e.g., payment_intent.succeeded)
+    console.log(event.type);
+    res.sendStatus(200);
+  }
+);
 
 // Server listen
 const PORT = process.env.PORT || 5000;

@@ -14,8 +14,19 @@ export interface FixedFund {
 }
 
 export interface Wallet {
+  id?: string;                     // MongoDB ObjectId as string
   userId: string; // User's unique ID
-  balance: number; // Current balance of the wallet
+  availableBalance: number; // Funds available for use
+  fixedBalance: number; // Locked funds
   transactions: Transaction[]; // Array of transactions
   fixedFunds: FixedFund[]; // Array of fixed fund records
+  clientSecret?: string;           // Stripe client secret (added for payment integration)
+
+  totalBalance: number;            // Virtual field summing available + fixed balances
+}
+
+export interface AddFundsResponse {
+  clientSecret: string;
+  walletBalance: number;
+  transactions: Transaction[];
 }

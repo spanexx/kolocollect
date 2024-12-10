@@ -1,30 +1,30 @@
+//walletRoute.js
+const express = require('express');
+const router = express.Router();
+const walletController = require('../controllers/walletController');
+
+// Wallet routes
+router.get('/:userId/full', walletController.getWallet);
+router.get('/:userId/balance', walletController.getWalletBalance);
+router.post('/:userId/add', walletController.addFunds);
+router.post('/:userId/withdraw', walletController.withdrawFunds);
+router.post('/:userId/transfer', walletController.transferFunds);
+router.get('/:userId/transactions', walletController.getTransactionHistory);
+router.post('/:userId/fix', walletController.fixFunds);
+router.get('/:userId/fixedFunds', walletController.getFixedFunds);
+
+module.exports = router;
+
+
+
+//walletController.js
 const Wallet = require('../models/Wallet');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Stripe API key
-const axios = require('axios'); // Assuming axios is required for CAPTCHA verification
-
-// CAPTCHA Verification Helper Function
-const verifyCaptcha = async (captchaResponse) => {
-  const secret = process.env.Captcha_secret; // Load secret key from environment variables
-
-  try {
-    const response = await axios.post('https://hcaptcha.com/siteverify', null, {
-      params: {
-        secret: secret,
-        response: captchaResponse,
-      },
-    });
-
-    return response.data.success; // Return true if CAPTCHA is verified, false otherwise
-  } catch (error) {
-    console.error('Error verifying hCaptcha:', error);
-    throw new Error('Error verifying CAPTCHA');
-  }
-};
 
 // Fetch full wallet details for a user (balance, fixed balance, and transactions)
 const getWallet = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('availableBalance fixedBalance totalBalance transactions');
+    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('availableBalance fixedBalance totalBalance transactions'); 
     if (!wallet) {
       return res.status(404).json({ message: 'Wallet not found' });
     }
@@ -50,52 +50,42 @@ const getWalletBalance = async (req, res) => {
   }
 };
 
-// Add funds using Stripe and CAPTCHA verification
+// Add funds using Stripe (via card)
 const addFunds = async (req, res) => {
-  const { amount, description, paymentMethodId, captchaResponse } = req.body;
+  const { amount, description, paymentMethodId } = req.body;
 
   if (amount <= 0) {
     return res.status(400).json({ error: 'Invalid amount' });
   }
 
   try {
-    // Step 1: Verify CAPTCHA response
-    const captchaVerified = await verifyCaptcha(captchaResponse);
-    if (!captchaVerified) {
-      return res.status(400).json({ error: 'CAPTCHA verification failed' });
-    }
-
-    // Step 2: Proceed with Stripe Payment Intent creation
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount * 100, // Amount in cents
       currency: 'usd',
       payment_method: paymentMethodId,
-      confirm: false, // Let the client confirm the payment
+      confirm: true,
     });
 
     let wallet = await Wallet.findOne({ userId: req.params.userId });
 
     if (!wallet) {
-      wallet = new Wallet({ userId: req.params.userId });
+      wallet = new Wallet({ userId: req.params.userId, availableBalance: 0, fixedBalance: 0, totalBalance: 0, transactions: [] });
     }
 
-    // Save transaction to the wallet
+    wallet.availableBalance += amount;
+    wallet.totalBalance += amount;
     wallet.transactions.push({
       amount,
       type: 'deposit',
       description: description || 'Funds added via Stripe',
     });
 
-    // Update total balance and available balance
-    wallet.availableBalance += amount;
-    wallet.totalBalance += amount;
-
     await wallet.save();
 
     res.status(200).json({
       message: 'Funds added successfully',
-      clientSecret: paymentIntent.client_secret, // Include client secret in response
       walletBalance: wallet.availableBalance,
+      totalBalance: wallet.totalBalance,
       transactions: wallet.transactions,
     });
   } catch (error) {
@@ -104,8 +94,8 @@ const addFunds = async (req, res) => {
   }
 };
 
-// Withdraw funds using Stripe (for payout to external account)
-const withdrawFunds = async (req, res) => {
+//Withdraw funds using Stripe (for payout to external account)
+  const withdrawFunds = async (req, res) => {
   const { amount, description } = req.body;
 
   if (amount <= 0) {
@@ -270,17 +260,19 @@ const getWalletByUserId = async (req, res) => {
     }
 
     res.status(200).json({
-      id: wallet._id.toString(),
+      id: wallet._id,
       userId: wallet.userId,
       balance: wallet.balance,
       transactions: wallet.transactions,
-      fixedFunds: wallet.fixedBalance,
+      fixedFunds: wallet.fixedFunds,
     });
   } catch (error) {
     console.error('Error fetching wallet by user ID:', error);
     res.status(500).json({ message: 'Server error while fetching wallet' });
   }
 };
+
+
 
 module.exports = {
   getWallet,
@@ -293,3 +285,152 @@ module.exports = {
   getFixedFunds,   
   getWalletByUserId      
 };
+
+
+
+
+//wallet.js
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+// Transaction Schema to track deposits, withdrawals, and other activities
+const transactionSchema = new Schema(
+  {
+    amount: { type: Number, required: true }, // Amount of the transaction
+    type: { 
+      type: String, 
+      enum: ['deposit', 'withdrawal', 'fixed', 'transfer'], 
+      required: true 
+    }, // Type of transaction
+    date: { type: Date, default: Date.now }, // Date of the transaction
+    description: { type: String, required: true }, // Description of the transaction
+    recipient: { type: Schema.Types.ObjectId, ref: 'User' }, // Recipient of funds (for transfers)
+  },
+  { timestamps: true }
+);
+
+const fixedFundsSchema = new Schema(
+  {
+    amount: { type: Number, required: true }, // Fixed amount
+    startDate: { type: Date, default: Date.now }, // Start date of the fixed fund
+    endDate: { type: Date, required: true }, // Maturity date
+    isMatured: { type: Boolean, default: false }, // Indicates if funds are matured
+  },
+  { timestamps: true }
+);
+
+const walletSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  balance: { type: Number, default: 0 },
+  transactions: [transactionSchema], // Transaction history
+  fixedFunds: [fixedFundsSchema], // Array of fixed fund records
+});
+
+
+// Virtual property to calculate total balance (available + fixed)
+walletSchema.virtual('totalBalance').get(function () {
+  return this.availableBalance + this.fixedBalance;
+});
+
+
+const Wallet = mongoose.model('Wallet', walletSchema);
+
+module.exports = Wallet;
+
+
+
+
+
+// backend/config/stripe.js
+const Stripe = require('stripe');
+
+// Initialize Stripe with your secret key
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY); 
+
+
+
+
+module.exports = stripe;
+
+
+
+
+
+// backend/controllersController/stripe.js
+
+const stripe = require('../config/stripe');
+
+const createPaymentIntent = async (req, res) => {
+  try {
+    const { amount, currency } = req.body;
+
+    // Create a PaymentIntent with the specified amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount, // Amount in smallest currency unit (e.g., cents for USD)
+      currency,
+      automatic_payment_methods: { enabled: true },
+    });
+
+    res.status(200).json({
+      success: true,
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { createPaymentIntent };
+
+
+
+//backend/middlewares/webhookMiddleware.js
+const bodyParser = require('body-parser');
+const User = require('../models/User');
+
+const stripeWebhook = (req, res, next) => {
+  const rawBody = req.rawBody; // Stripe requires the raw request body
+  const signature = req.headers['stripe-signature'];
+
+  try {
+    const event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    req.stripeEvent = event; // Attach the event to the request
+
+    // Handle the payment_intent.succeeded event
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      const userId = paymentIntent.metadata.userId; // Store userId as metadata during payment creation
+      const amountReceived = paymentIntent.amount_received / 100; // Convert amount to dollars or preferred currency
+
+      // Find the user and update their wallet balance
+      User.findById(userId).then((user) => {
+        if (user) {
+          // Update wallet balance and add transaction history
+          user.walletBalance += amountReceived;
+          user.walletTransactions.push({
+            amount: amountReceived,
+            type: 'deposit',
+          });
+          user.save(); // Save the updated user object
+        }
+      });
+    }
+
+    next();
+  } catch (err) {
+    res.status(400).send(`Webhook error: ${err.message}`);
+  }
+};
+
+module.exports = stripeWebhook;
+
+
+
+const express = require('express');
+const { createPaymentIntent } = require('../controllers/stripeController');
+const router = express.Router();
+
+// Route to create a PaymentIntent
+router.post('/payment-intent', createPaymentIntent);
+
+module.exports = router;

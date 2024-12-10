@@ -3,42 +3,14 @@ const bcrypt = require('bcryptjs');
 
 // Create a schema for User
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user',
-  },
-  dateJoined: {
-    type: Date,
-    default: Date.now,
-  },
-  communities: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Community',
-    },
-  ], 
-  walletBalance: { 
-    type: Number, 
-    default: 0 
-  },
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  dateJoined: { type: Date, default: Date.now },
+  communities: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Community' }],
 });
+
 
 // Method to check password validity
 userSchema.methods.matchPassword = async function (enteredPassword) {

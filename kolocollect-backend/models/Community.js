@@ -32,7 +32,7 @@ const communitySchema = new mongoose.Schema(
     adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     membersList: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         name: { type: String, required: true },
         email: { type: String, required: true },
         contributionsPaid: {
@@ -48,7 +48,7 @@ const communitySchema = new mongoose.Schema(
     ],
     contributionsList: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         amount: { type: Number, required: true },
         paymentMethod: { type: String },
         contributionDate: { type: Date, default: Date.now },

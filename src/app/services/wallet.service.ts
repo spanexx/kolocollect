@@ -8,58 +8,48 @@ import { FixedFund, Transaction, Wallet } from '../models/Wallet';
   providedIn: 'root',
 })
 export class WalletService {
-  private apiUrl = `${environment.apiUrl}/api/wallet`; // API endpoint for wallet
+  private apiUrl = `${environment.apiUrl}/api/wallet`;
 
   constructor(private http: HttpClient) {}
 
-  // Get full wallet details for the current user (includes balance and transaction history)
   getWallet(userId: string): Observable<Wallet> {
     return this.http.get<Wallet>(`${this.apiUrl}/${userId}/full`);
   }
 
-  // Get wallet balance for the current user
-  getWalletBalance(userId: string): Observable<{ walletBalance: number }> {
-    return this.http.get<{ walletBalance: number }>(`${this.apiUrl}/${userId}`);
+  getWalletBalance(userId: string): Observable<{ availableBalance: number; totalBalance: number }> {
+    return this.http.get<{ availableBalance: number; totalBalance: number }>(`${this.apiUrl}/${userId}/balance`);
   }
 
-  // Add funds to the wallet
-  addFunds(userId: string, amount: number, description: string): Observable<Wallet> {
-    return this.http.post<Wallet>(`${this.apiUrl}/${userId}/add`, {
-      amount,
-      description,
+  // Updated addFunds method with captchaResponse
+  addFunds(userId: string, amount: number, paymentMethodId: string, captchaResponse: string): Observable<{ clientSecret: string }> {
+    return this.http.post<{ clientSecret: string }>(`${this.apiUrl}/${userId}/add`, { 
+      amount, 
+      paymentMethodId, 
+      captchaResponse // Include the CAPTCHA response
     });
   }
 
-  // Withdraw funds from the wallet
   withdrawFunds(userId: string, amount: number, description: string): Observable<Wallet> {
-    return this.http.post<Wallet>(`${this.apiUrl}/${userId}/withdraw`, {
-      amount,
-      description,
-    });
+    return this.http.post<Wallet>(`${this.apiUrl}/${userId}/withdraw`, { amount, description });
   }
 
-  // Get transaction history for the wallet
   getTransactionHistory(userId: string, filterType: string): Observable<Transaction[]> {
-    return this.http.get<Transaction[]>(`${this.apiUrl}/${userId}/transactions`, {
-      params: { filterType }, // pass the filterType as a query param
-    });
+    return this.http.get<Transaction[]>(`${this.apiUrl}/${userId}/transactions`, { params: { filterType } });
   }
-  
 
+  fixFunds(userId: string, amount: number, duration: number): Observable<Wallet> {
+    return this.http.post<Wallet>(`${this.apiUrl}/${userId}/fix`, { amount, duration });
+  }
 
-  // Fix funds (lock a specific amount for a period)
-fixFunds(userId: string, amount: number, duration: number): Observable<Wallet> {
-  return this.http.post<Wallet>(`${this.apiUrl}/${userId}/fix`, { amount, duration });
-}
+  transferFunds(userId: string, recipientId: string, amount: number, description: string): Observable<Wallet> {
+    return this.http.post<Wallet>(`${this.apiUrl}/${userId}/transfer`, { recipientId, amount, description });
+  }
 
-// Transfer funds to another user
-transferFunds(userId: string, recipientId: string, amount: number, description: string): Observable<Wallet> {
-  return this.http.post<Wallet>(`${this.apiUrl}/${userId}/transfer`, { recipientId, amount, description });
-}
+  getFixedFunds(userId: string): Observable<FixedFund[]> {
+    return this.http.get<FixedFund[]>(`${this.apiUrl}/${userId}/fixedFunds`);
+  }
 
-// Get fixed funds information
-getFixedFunds(userId: string): Observable<FixedFund[]> {
-  return this.http.get<FixedFund[]>(`${this.apiUrl}/${userId}/fixedFunds`);
-}
-
+  getWalletByUserId(userId: string): Observable<Wallet> {
+    return this.http.get<Wallet>(`http://localhost:5000/api/user/${userId}/wallet`);
+  }
 }

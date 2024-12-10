@@ -63,7 +63,7 @@ export class WalletComponent implements OnInit {
     if (this.userId) {
       this.walletService.getWalletBalance(this.userId).subscribe({
         next: (response) => {
-          this.walletBalance = response.walletBalance;
+          this.walletBalance = response.availableBalance;
         },
         error: (err) => console.error('Error loading wallet balance:', err),
       });
@@ -74,6 +74,7 @@ export class WalletComponent implements OnInit {
     if (this.userId) {
       this.walletService.getTransactionHistory(this.userId, this.filterType).subscribe({
         next: (transactions) => {
+          console.log(transactions)
           this.transactions = transactions;
           this.filteredTransactions = transactions;
         },
@@ -83,7 +84,7 @@ export class WalletComponent implements OnInit {
     }
   }
   filterTransactions(): void {
-    if (this.userId) {
+    if (this.userId && this.filterType === 'all') {
       this.walletService.getTransactionHistory(this.userId, this.filterType).subscribe({
         next: (transactions) => {
           this.transactions = transactions;
@@ -92,6 +93,11 @@ export class WalletComponent implements OnInit {
         error: (err) => console.error('Error loading transactions:', err),
       });
       
+    }else{
+      this.filteredTransactions = this.transactions.filter(
+        transaction => transaction.type === this.filterType
+
+      )
     }
   }
   

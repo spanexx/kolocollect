@@ -1,19 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const walletController = require('../controllers/walletController')
 
-// Routes for users
+// User routes
 router.post('/register', userController.registerUser);
 router.post('/login', userController.loginUser);
-router.get('/profile/:id', (req, res, next) => {
-    console.log("Incoming userId in route:", req.params.id);
-    next();
-  }, userController.getUserProfile);
-  router.get('/:id/communities', userController.getUserCommunities);
+router.post('/wallet-update', userController.updateWalletBalance)
+router.get('/profile/:id', userController.getUserProfile);
 router.put('/profile/:id', userController.updateUserProfile);
 
-// Routes for joining and leaving communities
-router.put('/:id/communities/join', userController.joinCommunity);
-router.put('/:id/communities/leave', userController.leaveCommunity);
+//Get wallet by user ID
+router.get('/:userId/wallet', walletController.getWalletByUserId);
+
+// Get communities for a user
+router.get('/:userId/communities', userController.getUserCommunities);
+
+
 
 module.exports = router;
