@@ -3,20 +3,27 @@ const router = express.Router();
 const contributionController = require('../controllers/contributionController');
 const Contribution = require('../models/Contribution');
 
-
 // Contribution Routes
-router.post('/', async (req, res) => {
-    console.log('Received payload:', req.body); // Add this to log the raw body
-    try {
-      const contribution = new Contribution(req.body);
-      await contribution.save();
-      res.status(201).json(contribution);
-    } catch (error) {
-      console.error('Error saving contribution:', error); // Log detailed error
-      res.status(400).json({ error: error.message });
-    }
-  });
-  router.get('/community/:communityId', contributionController.getContributionsByCommunity); // Get all contributions for a specific community
-router.get('/user/:userId', contributionController.getContributionsByUser); // Get all contributions by a specific user
+
+// Get all contributions
+router.get('/', contributionController.getContributions);
+
+// Get a single contribution by ID
+router.get('/:id', contributionController.getContributionById);
+
+// Create a new contribution
+router.post('/create', contributionController.createContribution);
+
+// Update a contribution
+router.put('/:id', contributionController.updateContribution);
+
+// Delete a contribution
+router.delete('/:id', contributionController.deleteContribution);
+
+// Get all contributions for a specific community
+router.get('/community/:communityId', contributionController.getContributionsByCommunity);
+
+// Get all contributions by a specific user
+router.get('/user/:userId', contributionController.getContributionsByUser);
 
 module.exports = router;

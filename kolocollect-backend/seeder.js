@@ -1,12 +1,10 @@
+require('dotenv').config(); 
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const Community = require('./models/Community'); // Make sure the path is correct
-const { ObjectId } = mongoose.Types;
+const bcrypt = require('bcryptjs');
+const User = require('./models/User');
+const Wallet = require('./models/Wallet');
+const Community = require('./models/Community');
 
-// Load environment variables
-dotenv.config();
-
-// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -17,59 +15,132 @@ mongoose.connect(process.env.MONGO_URI, {
     process.exit(1);
 });
 
-// Define new community data based on the schema
-const communities = [
-    {
-        name: 'Savings Club',
-        description: 'A group of friends saving together for a big trip.',
-        members: 10,
-        contributions: 5000,
-        nextPayout: new Date(2024, 1, 20),
-        maxMembers: 20,  // Set maxMembers as required
-        contributionFrequency: 'monthly',  // Set contribution frequency as required
-        cycleLockEnabled: false,
-        backupFund: 1000,
-        membersList: [
-            { userId: new ObjectId(), name: 'John Doe', email: 'johndoe@example.com' },
-            { userId: new ObjectId(), name: 'Jane Smith', email: 'janesmith@example.com' },
-            { userId: new ObjectId(), name: 'Sarah Johnson', email: 'sarahjohnson@example.com' }
-        ]
-    },
-    {
-        name: 'Investment Circle',
-        description: 'A community of investors pooling funds for high return investments.',
-        members: 25,
-        contributions: 15000,
-        nextPayout: new Date(2024, 2, 15),
-        maxMembers: 50,  // Set maxMembers as required
-        contributionFrequency: 'bi-weekly',  // Set contribution frequency as required
-        cycleLockEnabled: true,
-        backupFund: 5000,
-        membersList: [
-            { userId: new ObjectId(), name: 'Alice Brown', email: 'alicebrown@example.com' },
-            { userId: new ObjectId(), name: 'Mark White', email: 'markwhite@example.com' },
-            { userId: new ObjectId(), name: 'Lucy Green', email: 'lucygreen@example.com' }
-        ]
-    }
-];
-
-// Seed the data into the database
-const seedData = async () => {
+// Seed users with their wallets and communities
+const seedUsers = async () => {
     try {
         // Clear existing data
-        await Community.deleteMany();
-        console.log('Existing data cleared');
+        await User.deleteMany({});
+        await Wallet.deleteMany({});
+        console.log('Existing users and wallets cleared');
 
-        // Insert new data
-        await Community.insertMany(communities);
-        console.log('Data successfully seeded');
+        // Create sample users
+        const users = [
+            {
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: bcrypt.hashSync('password123', 10),
+                role: 'admin',
+                communities: [],
+                contributions: []
+            },
+            {
+                name: 'Jane Smith',
+                email: 'jane@example.com',
+                password: bcrypt.hashSync('password123', 10),
+                role: 'user',
+                communities: [],
+                contributions: []
+            }
+        ];
 
-        // Exit process
-        process.exit();
+        for (const userData of users) {
+            const user = new User(userData);
+            const savedUser = await user.save();
+
+            // Create wallet for the user with initial balance
+            await Wallet.create({
+                userId: savedUser._id,
+                availableBalance: 1000,  // Set the initial balance
+                fixedBalance: 0,
+                transactions: [
+                    { amount: 1000, type: 'deposit', description: 'Initial deposit' }
+                ],
+            });
+
+            console.log(`User ${savedUser.name} and wallet created`);
+        }
     } catch (err) {
-        console.error('Error seeding data:', err);
-        process.exit(1);
+        console.error('Error seeding users and wallets:', err);
     }
 };
 
-seedData();
+// Seed community with members and initial cycle
+const seedCommunity = async () => {
+    try {
+        // Clear existing communities
+        await Community.deleteMany({});
+        console.log('Existing communities cleared');
+
+        // Find users to add as members
+        const john = await User.findOne({ email: 'john@example.com' });
+        const jane = await User.findOne({ email: 'jane@example.com' });
+
+        if (!john || !jane) {
+            console.log('One or both of the admin users not found!');
+            return;
+        }
+
+        // Create a new community
+        const community = new Community({
+            name: 'Sample Community',
+            description: 'This is a test community for contributions.',
+            maxMembers: 10,
+            contributionFrequency: 'Weekly',
+            cycleLockEnabled: false,
+            backupFund: 0,
+            totalContributions: 0,
+            nextPayout: new Date(),
+            isPrivate: false,
+            contributionLimit: 1000,
+            adminId: john._id,
+            membersList: [
+                { userId: john._id, name: john.name, email: john.email, position: 1, status: 'active' },
+                { userId: jane._id, name: jane.name, email: jane.email, position: 2, status: 'active' }
+            ],
+            contributionList: [],
+            currentCycle: 1,
+            cycles: [{
+                cycleNumber: 1,
+                startDate: new Date(),
+                endDate: new Date(new Date().setDate(new Date().getDate() + 7)), // 1-week cycle
+                contributions: [],
+            }],
+        });
+
+        await community.save();
+        console.log('Sample community seeded successfully!');
+    } catch (err) {
+        console.error('Error seeding community:', err);
+    }
+};
+
+// Seed wallets with initial balance and seed community
+const seedWallet = async (userId, initialBalance) => {
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) {
+        await Wallet.create({
+            userId,
+            availableBalance: initialBalance,
+            totalBalance: initialBalance,
+        });
+    } else {
+        wallet.availableBalance = initialBalance;
+        wallet.totalBalance = initialBalance;
+        await wallet.save();
+    }
+};
+
+// Initialize seeding process
+const initializeSeeding = async () => {
+    await seedUsers();
+    await seedCommunity();
+    mongoose.disconnect();
+};
+
+// Run seeding
+initializeSeeding().then(() => {
+    console.log('Seeding completed');
+}).catch((err) => {
+    console.error('Error during seeding:', err);
+    mongoose.disconnect();
+});
