@@ -1,18 +1,16 @@
-//walletRoute.js
 const express = require('express');
-const router = express.Router();
 const walletController = require('../controllers/walletController');
-const stripeWebhook = require('../middlewares/webhookMiddleware');
+const router = express.Router();
 
-// Wallet routes
-router.get('/:userId/full', walletController.getWallet);
-router.get('/:userId/balance', walletController.getWalletBalance);
-router.post('/:userId/add', walletController.addFunds);
-router.post('/:userId/withdraw', walletController.withdrawFunds);
-router.post('/:userId/transfer', walletController.transferFunds);
+// Wallet operations
+router.get('/:userId/balance', walletController.getWalletBalance); // Fetch wallet balance
+router.get('/:userId', walletController.getWallet); // Fetch full wallet details
+
+router.post('/add-funds', walletController.addFunds);
+router.post('/withdraw-funds', walletController.withdrawFunds);
+router.post('/transfer-funds', walletController.transferFunds);
 router.get('/:userId/transactions', walletController.getTransactionHistory);
-router.post('/:userId/fix', walletController.fixFunds);
-router.get('/:userId/fixedFunds', walletController.getFixedFunds);
-router.post('/webhook', stripeWebhook);
+router.post('/:userId/fix-funds', walletController.fixFunds);
+router.get('/:userId/fixed-funds', walletController.getFixedFunds);
 
 module.exports = router;

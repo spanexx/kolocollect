@@ -11,13 +11,13 @@ const userSchema = new mongoose.Schema({
   contributions: [
     {
       communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: true, index: true },
-      cycleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle' }, // Tracks specific cycle
-      midCycleId: { type: mongoose.Schema.Types.ObjectId, ref: 'MidCycle' }, // Tracks specific mid-cycle
-      totalContributed: { 
-        type: Number, 
-        default: 0, 
+      cycleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle' },
+      midCycleId: { type: mongoose.Schema.Types.ObjectId, ref: 'MidCycle' },
+      totalContributed: {
+        type: Number,
+        default: 0,
         validate: {
-          validator: function(value) {
+          validator: function (value) {
             return value >= 0;
           },
           message: 'Total contributed amount cannot be negative.',
@@ -37,11 +37,11 @@ const userSchema = new mongoose.Schema({
           amount: { type: Number, default: 0 },
         },
       ],
-      penalty: { 
-        type: Number, 
-        default: 0, 
+      penalty: {
+        type: Number,
+        default: 0,
         validate: {
-          validator: function(value) {
+          validator: function (value) {
             return value >= 0;
           },
           message: 'Penalty amount cannot be negative.',
@@ -62,8 +62,7 @@ const userSchema = new mongoose.Schema({
       type: { type: String, enum: ['info', 'warning', 'alert', 'penalty', 'payout'], default: 'info' },
       message: { type: String },
       date: { type: Date, default: Date.now },
-      read: { type: Boolean, default: false },
-      communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' }, // Community-specific notifications
+      communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
     },
   ],
   activityLog: [
@@ -92,85 +91,74 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Static method to update contributions for a user
-userSchema.statics.updateUserContributions = async function (userId, communityId, updateData) {
-  try {
-    const user = await this.findById(userId);
+// Add community to user's profile
+userSchema.methods.addCommunity = async function (communityId) {
+  if (!this.communities.includes(communityId)) {
+    this.communities.push(communityId);
 
-    if (!user) throw new Error('User not found');
+    // Log the action
+    this.activityLog.push({
+      action: 'joined community',
+      details: `Joined community with ID: ${communityId}`,
+    });
 
-    const contribution = user.contributions.find(
-      (c) => c.communityId.toString() === communityId.toString()
-    );
-
-    if (contribution) {
-      // Update contribution details
-      contribution.totalContributed += updateData.amount || 0;
-      contribution.contributionsPaid.push({
-        amount: updateData.amount,
-        date: new Date(),
-      });
-
-      if (updateData.missed) {
-        contribution.missedContributions.push({
-          cycleId: updateData.cycleId,
-          midCycleId: updateData.midCycleId,
-          amount: updateData.amount,
-        });
-      }
-
-      if (updateData.penalty) {
-        contribution.penalty += updateData.penalty;
-      }
-    } else {
-      // If no contribution exists for this community, create a new entry
-      user.contributions.push({
-        communityId,
-        cycleId: updateData.cycleId,
-        midCycleId: updateData.midCycleId,
-        totalContributed: updateData.amount || 0,
-        contributionsPaid: [
-          { amount: updateData.amount, date: new Date() },
-        ],
-        missedContributions: updateData.missed
-          ? [
-              {
-                cycleId: updateData.cycleId,
-                midCycleId: updateData.midCycleId,
-                amount: updateData.amount,
-              },
-            ]
-          : [],
-        penalty: updateData.penalty || 0,
-      });
-    }
-
-    await user.save();
-    return user;
-  } catch (err) {
-    console.error('Error updating user contributions:', err);
-    throw err;
+    await this.save();
   }
 };
 
-// Automate penalty for missed contributions
-userSchema.methods.applyPenalty = async function (communityId, penaltyAmount, missedCycleId, missedMidCycleId) {
-  try {
-    const contribution = this.contributions.find(
-      (c) => c.communityId.toString() === communityId.toString()
-    );
+// Remove community from user's profile
+userSchema.methods.removeCommunity = async function (communityId) {
+  this.communities = this.communities.filter((id) => !id.equals(communityId));
 
-    if (!contribution) throw new Error('Contribution data not found for this community');
+  // Log the action
+  this.activityLog.push({
+    action: 'left community',
+    details: `Left community with ID: ${communityId}`,
+  });
 
-    // Add missed contribution details
+  await this.save();
+};
+
+// Add contribution to a user
+userSchema.methods.addContribution = async function (communityId, amount, cycleId = null, midCycleId = null) {
+  const contribution = this.contributions.find((c) => c.communityId.toString() === communityId.toString());
+
+  if (contribution) {
+    contribution.totalContributed += amount;
+    contribution.contributionsPaid.push({
+      amount,
+      date: new Date(),
+    });
+  } else {
+    this.contributions.push({
+      communityId,
+      totalContributed: amount,
+      contributionsPaid: [{ amount, date: new Date() }],
+      cycleId,
+      midCycleId,
+    });
+  }
+
+  // Log the action
+  this.activityLog.push({
+    action: 'contributed',
+    details: `Contributed ${amount} to community ${communityId}`,
+  });
+
+  await this.save();
+};
+
+// Apply penalty to user for missed contributions
+userSchema.methods.applyPenalty = async function (communityId, penaltyAmount, cycleId, midCycleId) {
+  const contribution = this.contributions.find((c) => c.communityId.toString() === communityId.toString());
+
+  if (contribution) {
+    contribution.penalty += penaltyAmount;
     contribution.missedContributions.push({
-      cycleId: missedCycleId,
-      midCycleId: missedMidCycleId,
+      cycleId,
+      midCycleId,
       amount: penaltyAmount,
     });
-
-    // Update penalty
-    contribution.penalty += penaltyAmount;
 
     // Log the action
     this.activityLog.push({
@@ -186,32 +174,48 @@ userSchema.methods.applyPenalty = async function (communityId, penaltyAmount, mi
     });
 
     await this.save();
-    return this;
-  } catch (err) {
-    console.error('Error applying penalty:', err);
-    throw err;
+  } else {
+    throw new Error('Contribution record not found for the specified community');
   }
 };
 
-// Enhanced notification example
-userSchema.methods.addNotification = function (type, message, communityId = null) {
-  this.notifications.push({
-    type,
-    message,
-    communityId,
-  });
+// Add a notification to the user
+userSchema.methods.addNotification = async function (type, message, communityId = null) {
+  try {
+    this.notifications.push({
+      type, // Type of notification (e.g., info, penalty, payout, etc.)
+      message, // Message to display to the user
+      communityId, // Optional: Link to a specific community
+      date: new Date(), // Timestamp
+    });
 
-  return this.save();
+    // Save the user with the new notification
+    await this.save();
+
+    // Log the action in the user's activity log
+    this.activityLog.push({
+      action: 'notification',
+      details: `New notification added: ${message}`,
+      date: new Date(),
+    });
+
+    await this.save();
+    return { message: 'Notification added successfully.' };
+  } catch (err) {
+    console.error('Error adding notification:', err);
+    throw new Error('Failed to add notification.');
+  }
 };
 
-// Virtual field for total communities
-userSchema.virtual('totalCommunities').get(function () {
-  return this.communities.length;
-});
 
 // Virtual field for total penalties
 userSchema.virtual('totalPenalties').get(function () {
   return this.contributions.reduce((total, contribution) => total + contribution.penalty, 0);
+});
+
+// Virtual field for total communities
+userSchema.virtual('totalCommunities').get(function () {
+  return this.communities.length;
 });
 
 module.exports = mongoose.model('User', userSchema);

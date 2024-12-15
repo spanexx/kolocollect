@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const contributionController = require('../controllers/contributionController');
-const Contribution = require('../models/Contribution');
 
 // Contribution Routes
 
@@ -25,5 +24,12 @@ router.get('/community/:communityId', contributionController.getContributionsByC
 
 // Get all contributions by a specific user
 router.get('/user/:userId', contributionController.getContributionsByUser);
+
+// Get all contributions in mid-cycles for a community
+router.get('/community/:communityId/midcycles', contributionController.getMidCycleContributions);
+
+// Fetch all contributions for a specific mid-cycle
+router.get('/midcycle/:midCycleId', contributionController.getContributionsByMidCycle);
+
 
 module.exports = router;

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Wallet = require('../models/Wallet'); // Ensure Wallet model is imported
 const User = require('../models/User'); // Ensure User model is imported
 
+
 const CommunitySchema = new mongoose.Schema({
     name: { type: String, required: true },
     admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

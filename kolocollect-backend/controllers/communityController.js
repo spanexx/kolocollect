@@ -1,6 +1,10 @@
+const { calculateTotalOwed, processBackPayment } = require('../utils/contributionUtils');
 const Community = require('../models/Community');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
+const createErrorResponse = (res, status, message) => res.status(status).json({ error: { message } });
+
+
 
 // Create a new community
 exports.createCommunity = async (req, res) => {
@@ -67,6 +71,7 @@ exports.joinCommunity = async (req, res) => {
     const isAlreadyMember = community.members.some((member) => member.userId.equals(userId));
     if (isAlreadyMember) {
       return res.status(400).json({ message: 'User is already a member of the community' });
+
     }
 
     // Add the user as a member (position remains null if first cycle hasn't started)
@@ -90,7 +95,30 @@ exports.joinCommunity = async (req, res) => {
     res.status(200).json({ message: 'Successfully joined the community', community });
   } catch (err) {
     console.error('Error joining community:', err);
-    res.status(500).json({ message: 'Error joining community', error: err.message });
+    createErrorResponse(res, 500, 'Error joining community. Please try again.');
+
+  }
+};
+
+
+exports.getCommunityById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return createErrorResponse(res, 400, 'Community ID is required.');
+    }
+
+    const community = await Community.findById(id);
+
+    if (!community) {
+      return createErrorResponse(res, 404, 'Community not found.');
+    }
+
+    res.status(200).json({ message: 'Community fetched successfully.', community });
+  } catch (err) {
+    console.error('Error fetching community:', err);
+    createErrorResponse(res, 500, 'Failed to fetch community. Please try again.');
   }
 };
 
@@ -242,16 +270,12 @@ exports.updateSettings = async (req, res) => {
 exports.calculateTotalOwed = async (req, res) => {
   try {
     const { communityId, userId } = req.params;
-
-    const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-
-    const totalOwed = community.calculateTotalOwed(userId);
+    const totalOwed = await calculateTotalOwed(communityId, userId);
 
     res.status(200).json({ totalOwed });
   } catch (err) {
     console.error('Error calculating total owed:', err);
-    res.status(500).json({ message: 'Error calculating total owed', error: err.message });
+    createErrorResponse(res, 500, 'Failed to calculate total owed.');
   }
 };
 
@@ -261,15 +285,12 @@ exports.processBackPayment = async (req, res) => {
     const { communityId, userId } = req.params;
     const { paymentAmount } = req.body;
 
-    const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-
-    await community.processBackPayment(userId, paymentAmount);
+    await processBackPayment(communityId, userId, paymentAmount);
 
     res.status(200).json({ message: 'Back payment processed successfully.' });
   } catch (err) {
     console.error('Error processing back payment:', err);
-    res.status(500).json({ message: 'Error processing back payment', error: err.message });
+    createErrorResponse(res, 500, 'Failed to process back payment.');
   }
 };
 
@@ -289,6 +310,62 @@ exports.applyResolvedVotes = async (req, res) => {
     res.status(500).json({ message: 'Error applying resolved votes', error: err.message });
   }
 };
+
+exports.getMidCycleContributions = async (req, res) => {
+  try {
+    const { communityId } = req.params;
+
+    // Validate that the community exists
+    const community = await Community.findById(communityId);
+    if (!community) return createErrorResponse(res, 404, 'Community not found.');
+
+    // Extract contributions from all mid-cycles
+    const midCycleContributions = community.midCycle.map(midCycle => ({
+      cycleNumber: midCycle.cycleNumber,
+      isComplete: midCycle.isComplete,
+      nextInLine: midCycle.nextInLine,
+      contributions: midCycle.contributors.map(contributor => ({
+        contributorId: contributor.contributorId,
+        contributions: contributor.contributions,
+      })),
+    }));
+
+    // Check if there are any mid-cycle contributions
+    if (!midCycleContributions.length) {
+      return createErrorResponse(res, 404, 'No mid-cycle contributions found for this community.');
+    }
+
+    res.status(200).json({ midCycleContributions });
+  } catch (err) {
+    console.error('Error fetching mid-cycle contributions:', err);
+    createErrorResponse(res, 500, 'Server error while fetching mid-cycle contributions.');
+  }
+};
+
+
+// Get contributions by mid-cycle
+exports.getContributionsByMidCycle = async (req, res) => {
+  try {
+    const { midCycleId } = req.params;
+
+    if (!midCycleId) {
+      return createErrorResponse(res, 400, 'Mid-cycle ID is required.');
+    }
+
+    // Fetch contributions associated with the midCycleId
+    const contributions = await Contribution.find({ midCycleId });
+
+    if (!contributions || contributions.length === 0) {
+      return createErrorResponse(res, 404, 'No contributions found for this mid-cycle.');
+    }
+
+    res.status(200).json({ message: 'Contributions fetched successfully.', contributions });
+  } catch (err) {
+    console.error('Error fetching contributions by mid-cycle:', err);
+    createErrorResponse(res, 500, 'Failed to fetch contributions. Please try again.');
+  }
+};
+
 
 
 exports.deleteCommunity = async (req, res) => {

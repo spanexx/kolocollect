@@ -1,18 +1,17 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const Community = require('./Community'); // Import Community model
 
 // Transaction Schema to track deposits, withdrawals, and other activities
 const transactionSchema = new Schema(
   {
     amount: { type: Number, required: true },
-    type: { 
-      type: String, 
-      enum: ['deposit', 'withdrawal', 'fixed', 'transfer', 'contribution'], // Added 'contribution'
-      required: true 
-    },
+    type: { type: String, enum: ['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer'], required: true },
+    description: { type: String },
+    recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
     date: { type: Date, default: Date.now },
-    description: { type: String, required: true },
-    recipient: { type: Schema.Types.ObjectId, ref: 'User' },
+    communityId: { type: Schema.Types.ObjectId, ref: 'Community' }, // Added community reference
   },
   { timestamps: true }
 );
@@ -29,48 +28,63 @@ const fixedFundsSchema = new Schema(
 );
 
 // Wallet Schema to store balance, transactions, and fixed funds for each user
-const walletSchema = new Schema({
+const walletSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   availableBalance: { type: Number, default: 0 },
   fixedBalance: { type: Number, default: 0 },
+  totalBalance: { type: Number, default: 0 },
   transactions: [transactionSchema],
-  fixedFunds: [fixedFundsSchema],
-  clientSecret: { type: String, default: null },
+  isFrozen: { type: Boolean, default: false },
 });
 
 // Add a virtual for total balance
-walletSchema.virtual('totalBalance').get(function() {
+walletSchema.virtual('totalBalance').get(function () {
   return this.availableBalance + this.fixedBalance;
 });
 
 // Method to add a transaction and adjust balances
-walletSchema.methods.addTransaction = async function(amount, type, description, recipient = null) {
-  const transaction = {
+walletSchema.methods.addTransaction = async function (amount, type, description, recipient, communityId) {
+  if (this.isFrozen) {
+    throw new Error('Wallet is frozen. No transactions allowed.');
+  }
+
+  if (type === 'penalty' || type === 'withdrawal') {
+    if (this.availableBalance < amount) {
+      throw new Error('Insufficient balance for the transaction.');
+    }
+    this.availableBalance -= amount;
+  } else if (type === 'deposit' || type === 'contribution') {
+    this.availableBalance += amount;
+  }
+
+  this.transactions.push({
     amount,
     type,
     description,
-    recipient
-  };
+    recipient,
+    communityId,
+  });
 
-  if (type === 'deposit') {
-    this.availableBalance += amount;
-  } else if (type === 'withdrawal') {
-    if (this.availableBalance < amount) throw new Error('Insufficient balance');
-    this.availableBalance -= amount;
-  } else if (type === 'fixed') {
-    this.fixedBalance += amount;
-  } else if (type === 'contribution') {
-    // Handle contribution withdrawal
-    this.availableBalance -= amount; // Deduct from available balance
-  }
+  this.totalBalance = this.availableBalance + this.fixedBalance;
+  await this.save();
+};
 
-  this.transactions.push(transaction);
+// Method to deduct penalties
+walletSchema.methods.deductPenalty = async function (penaltyAmount) {
+  if (this.availableBalance < penaltyAmount)
+    throw new Error('Insufficient balance for penalty deduction');
+  this.availableBalance -= penaltyAmount;
+  this.transactions.push({
+    amount: penaltyAmount,
+    type: 'withdrawal',
+    description: 'Penalty deduction',
+  });
   await this.save();
 };
 
 // Method to check if fixed funds have matured
-fixedFundsSchema.methods.checkMaturity = function() {
-  return this.isMatured || (new Date() >= this.endDate);
+fixedFundsSchema.methods.checkMaturity = function () {
+  return this.isMatured || new Date() >= this.endDate;
 };
 
 // Indexing on userId for faster lookups

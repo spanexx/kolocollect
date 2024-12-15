@@ -1,295 +1,218 @@
 const Wallet = require('../models/Wallet');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Stripe API key
-const axios = require('axios'); // Assuming axios is required for CAPTCHA verification
+const createErrorResponse = (res, status, message) => res.status(status).json({ error: { message } });
 
-// CAPTCHA Verification Helper Function
-const verifyCaptcha = async (captchaResponse) => {
-  const secret = process.env.Captcha_secret; // Load secret key from environment variables
-
+// Add Funds
+exports.addFunds = async (req, res) => {
   try {
-    const response = await axios.post('https://hcaptcha.com/siteverify', null, {
-      params: {
-        secret: secret,
-        response: captchaResponse,
-      },
-    });
+    const { userId, amount } = req.body;
 
-    return response.data.success; // Return true if CAPTCHA is verified, false otherwise
-  } catch (error) {
-    console.error('Error verifying hCaptcha:', error);
-    throw new Error('Error verifying CAPTCHA');
-  }
-};
-
-// Fetch full wallet details for a user (balance, fixed balance, and transactions)
-const getWallet = async (req, res) => {
-  try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('availableBalance fixedBalance totalBalance transactions');
-    if (!wallet) {
-      return res.status(404).json({ message: 'Wallet not found' });
-    }
-    res.json(wallet);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Fetch wallet balance for a user
-const getWalletBalance = async (req, res) => {
-  try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('availableBalance totalBalance');
-    if (!wallet) {
-      return res.status(404).json({ message: 'Wallet not found' });
-    }
-    res.json({
-      availableBalance: wallet.availableBalance,
-      totalBalance: wallet.totalBalance
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Add funds using Stripe and CAPTCHA verification
-const addFunds = async (req, res) => {
-  const { amount, description, paymentMethodId, captchaResponse } = req.body;
-
-  if (amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-
-  try {
-    // Step 1: Verify CAPTCHA response
-    const captchaVerified = await verifyCaptcha(captchaResponse);
-    if (!captchaVerified) {
-      return res.status(400).json({ error: 'CAPTCHA verification failed' });
+    if (!userId || !amount || amount <= 0) {
+      return createErrorResponse(res, 400, 'Invalid user ID or amount.');
     }
 
-    // Step 2: Proceed with Stripe Payment Intent creation
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // Amount in cents
-      currency: 'usd',
-      payment_method: paymentMethodId,
-      confirm: false, // Let the client confirm the payment
-    });
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
 
-    let wallet = await Wallet.findOne({ userId: req.params.userId });
+    wallet.availableBalance += amount;
+    wallet.totalBalance = wallet.availableBalance + wallet.fixedBalance;
 
-    if (!wallet) {
-      wallet = new Wallet({ userId: req.params.userId });
-    }
-
-    // Save transaction to the wallet
     wallet.transactions.push({
       amount,
       type: 'deposit',
-      description: description || 'Funds added via Stripe',
+      description: 'Manual fund addition',
+      date: new Date(),
     });
-
-    // Update total balance and available balance
-    wallet.availableBalance += amount;
-    wallet.totalBalance += amount;
 
     await wallet.save();
 
-    res.status(200).json({
-      message: 'Funds added successfully',
-      clientSecret: paymentIntent.client_secret, // Include client secret in response
-      walletBalance: wallet.availableBalance,
-      transactions: wallet.transactions,
-    });
-  } catch (error) {
-    console.error('Error adding funds:', error);
-    res.status(500).json({ message: 'Error adding funds to wallet' });
+    res.status(200).json({ message: `Successfully added €${amount} to wallet.`, wallet });
+  } catch (err) {
+    console.error('Error adding funds:', err);
+    createErrorResponse(res, 500, 'Failed to add funds.');
   }
 };
 
-// Withdraw funds using Stripe (for payout to external account)
-const withdrawFunds = async (req, res) => {
-  const { amount, description } = req.body;
-
-  if (amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-
+// Withdraw Funds
+exports.withdrawFunds = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId });
+    const { userId, amount } = req.body;
 
-    if (!wallet) {
-      return res.status(404).json({ error: 'Wallet not found' });
+    if (!userId || !amount || amount <= 0) {
+      return createErrorResponse(res, 400, 'Invalid user ID or amount.');
+    }
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
+
+    if (wallet.isFrozen) {
+      return createErrorResponse(res, 403, 'Wallet is frozen. Withdrawals are not allowed.');
     }
 
     if (wallet.availableBalance < amount) {
-      return res.status(400).json({ error: 'Insufficient funds' });
+      return createErrorResponse(res, 400, 'Insufficient funds in wallet.');
     }
 
-    // Create a transfer from the Stripe account (payout to user's bank account)
-    const transfer = await stripe.transfers.create({
-      amount: amount * 100, // Transfer amount in cents
-      currency: 'usd',
-      destination: 'your_stripe_account_id', // Replace with the user's connected Stripe account ID
-    });
-
     wallet.availableBalance -= amount;
-    wallet.totalBalance -= amount;
+    wallet.totalBalance = wallet.availableBalance + wallet.fixedBalance;
+
     wallet.transactions.push({
       amount,
       type: 'withdrawal',
-      description: description || 'Funds withdrawn via Stripe',
+      description: 'Manual fund withdrawal',
+      date: new Date(),
     });
 
     await wallet.save();
 
-    res.status(200).json({
-      message: 'Funds withdrawn successfully',
-      walletBalance: wallet.availableBalance,
-      totalBalance: wallet.totalBalance,
-      transactions: wallet.transactions,
-    });
-  } catch (error) {
-    console.error('Error withdrawing funds:', error);
-    res.status(500).json({ message: 'Error withdrawing funds from wallet' });
+    res.status(200).json({ message: `Successfully withdrew €${amount} from wallet.`, wallet });
+  } catch (err) {
+    console.error('Error withdrawing funds:', err);
+    createErrorResponse(res, 500, 'Failed to withdraw funds.');
   }
 };
 
-// Transfer funds
-const transferFunds = async (req, res) => {
-  const { amount, recipientId, description } = req.body;
-
-  if (amount <= 0 || !recipientId) {
-    return res.status(400).json({ error: 'Invalid amount or recipient ID' });
-  }
-
+// Transfer Funds
+exports.transferFunds = async (req, res) => {
   try {
-    const senderWallet = await Wallet.findOne({ userId: req.params.userId });
+    const { userId, amount, recipientId, description } = req.body;
+
+    if (!amount || amount <= 0 || !recipientId) {
+      return createErrorResponse(res, 400, 'Invalid amount or recipient ID.');
+    }
+
+    const senderWallet = await Wallet.findOne({ userId });
     const recipientWallet = await Wallet.findOne({ userId: recipientId });
 
-    if (!senderWallet || !recipientWallet) {
-      return res.status(404).json({ error: 'Sender or recipient wallet not found' });
+    if (!senderWallet) return createErrorResponse(res, 404, 'Sender wallet not found.');
+    if (!recipientWallet) return createErrorResponse(res, 404, 'Recipient wallet not found.');
+
+    if (senderWallet.isFrozen) {
+      return createErrorResponse(res, 403, 'Sender wallet is frozen. Transfers are not allowed.');
     }
 
     if (senderWallet.availableBalance < amount) {
-      return res.status(400).json({ error: 'Insufficient funds' });
+      return createErrorResponse(res, 400, 'Insufficient funds for transfer.');
     }
 
-    // Deduct from sender
     senderWallet.availableBalance -= amount;
-    senderWallet.totalBalance -= amount;
     senderWallet.transactions.push({
       amount,
       type: 'transfer',
-      description: description || `Transferred ${amount} USD`,
+      description: description || `Transferred €${amount}`,
       recipient: recipientId,
     });
 
-    // Add to recipient
     recipientWallet.availableBalance += amount;
-    recipientWallet.totalBalance += amount;
     recipientWallet.transactions.push({
       amount,
       type: 'deposit',
-      description: description || `Received ${amount} USD`,
+      description: description || `Received €${amount}`,
     });
 
     await senderWallet.save();
     await recipientWallet.save();
 
-    res.status(200).json({ message: 'Funds transferred successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(200).json({ message: `Successfully transferred €${amount}.`, senderWallet, recipientWallet });
+  } catch (err) {
+    console.error('Error transferring funds:', err);
+    createErrorResponse(res, 500, 'Failed to transfer funds.');
   }
 };
 
-const getTransactionHistory = async (req, res) => {
+// Get Transaction History
+exports.getTransactionHistory = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('transactions');
-    if (!wallet) {
-      return res.status(404).json({ message: 'Wallet not found' });
-    }
+    const { userId } = req.params;
+
+    const wallet = await Wallet.findOne({ userId }).select('transactions');
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
+
     res.status(200).json(wallet.transactions);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('Error fetching transaction history:', err);
+    createErrorResponse(res, 500, 'Failed to fetch transaction history.');
   }
 };
 
-const fixFunds = async (req, res) => {
-  const { amount, duration } = req.body;
-
-  if (amount <= 0 || !duration) {
-    return res.status(400).json({ error: 'Invalid amount or duration' });
-  }
-
+// Fix Funds
+exports.fixFunds = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId });
+    const { userId, amount, duration } = req.body;
 
-    if (!wallet) {
-      return res.status(404).json({ error: 'Wallet not found' });
+    if (!amount || amount <= 0 || !duration) {
+      return createErrorResponse(res, 400, 'Invalid amount or duration.');
     }
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
 
     if (wallet.availableBalance < amount) {
-      return res.status(400).json({ error: 'Insufficient funds' });
+      return createErrorResponse(res, 400, 'Insufficient funds for fixing.');
     }
 
     wallet.availableBalance -= amount;
-    wallet.fixedBalance = (wallet.fixedBalance || 0) + amount;
+    wallet.fixedBalance += amount;
     wallet.transactions.push({
       amount,
       type: 'fix',
-      description: `Fixed ${amount} for ${duration} days`,
+      description: `Fixed €${amount} for ${duration} days`,
     });
 
     await wallet.save();
 
-    res.status(200).json({
-      message: 'Funds successfully fixed',
-      walletBalance: wallet.availableBalance,
-      fixedBalance: wallet.fixedBalance,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(200).json({ message: 'Funds fixed successfully.', wallet });
+  } catch (err) {
+    console.error('Error fixing funds:', err);
+    createErrorResponse(res, 500, 'Failed to fix funds.');
   }
 };
 
-const getFixedFunds = async (req, res) => {
+// Get Fixed Funds
+exports.getFixedFunds = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId }).select('fixedBalance');
-    if (!wallet) {
-      return res.status(404).json({ message: 'Wallet not found' });
-    }
+    const { userId } = req.params;
+
+    const wallet = await Wallet.findOne({ userId }).select('fixedBalance');
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
+
     res.status(200).json({ fixedBalance: wallet.fixedBalance });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('Error fetching fixed funds:', err);
+    createErrorResponse(res, 500, 'Failed to fetch fixed funds.');
   }
 };
 
-const getWalletByUserId = async (req, res) => {
+
+// Get Wallet Balance
+exports.getWalletBalance = async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId });
-    if (!wallet) {
-      return res.status(404).json({ message: 'Wallet not found' });
-    }
+    const { userId } = req.params;
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
 
     res.status(200).json({
-      id: wallet._id.toString(),
-      userId: wallet.userId,
-      balance: wallet.balance,
-      transactions: wallet.transactions,
-      fixedFunds: wallet.fixedBalance,
+      availableBalance: wallet.availableBalance,
+      fixedBalance: wallet.fixedBalance,
+      totalBalance: wallet.totalBalance,
     });
-  } catch (error) {
-    console.error('Error fetching wallet by user ID:', error);
-    res.status(500).json({ message: 'Server error while fetching wallet' });
+  } catch (err) {
+    console.error('Error fetching wallet balance:', err);
+    createErrorResponse(res, 500, 'Failed to fetch wallet balance.');
   }
 };
 
-module.exports = {
-  getWallet,
-  getWalletBalance,
-  addFunds,
-  withdrawFunds,
-  transferFunds,
-  getTransactionHistory, 
-  fixFunds,              
-  getFixedFunds,   
-  getWalletByUserId      
+// Get Wallet Details
+exports.getWallet = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const wallet = await Wallet.findOne({ userId }).populate('transactions.recipient', 'name email');
+    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
+
+    res.status(200).json(wallet);
+  } catch (err) {
+    console.error('Error fetching wallet:', err);
+    createErrorResponse(res, 500, 'Failed to fetch wallet details.');
+  }
 };

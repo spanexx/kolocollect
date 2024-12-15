@@ -44,4 +44,7 @@ router.post('/payment/back/:communityId/:userId', communityController.processBac
 // Route to apply resolved votes
 router.post('/votes/apply/:communityId', communityController.applyResolvedVotes);
 
+//Fetch All Contributions in Mid-Cycles
+router.get('/:communityId/midcycle-contributions', communityController.getMidCycleContributions);
+
 module.exports = router;
