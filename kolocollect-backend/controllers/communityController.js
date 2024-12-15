@@ -5,15 +5,7 @@ const Wallet = require('../models/Wallet');
 // Create a new community
 exports.createCommunity = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      maxMembers,
-      contributionFrequency,
-      backupFundPercentage,
-      adminId,
-      settings,
-    } = req.body;
+    const { name, description, maxMembers, contributionFrequency, backupFundPercentage, adminId, settings } = req.body;
 
     if (!name || !maxMembers || !contributionFrequency || !adminId) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -29,17 +21,22 @@ exports.createCommunity = async (req, res) => {
         backupFundPercentage,
         ...settings,
       },
-      members: [{
-        userId: adminId,
-        position: 1,
-        status: 'active',
-        penalty: 0,
-      }],
+      members: [
+        {
+          userId: adminId,
+          position: 1,
+          status: 'active',
+          penalty: 0,
+        },
+      ],
     });
+
+    // Ensure firstCycleMin is synced during creation
+    await newCommunity.syncFirstCycleMin(newCommunity.settings.firstCycleMin || 5);
 
     await newCommunity.save();
 
-    // Link community to admin user
+    // Link community to the admin's user profile
     const adminUser = await User.findById(adminId);
     if (adminUser) {
       adminUser.communities.push(newCommunity._id);
@@ -53,11 +50,12 @@ exports.createCommunity = async (req, res) => {
   }
 };
 
+
 // Join a community
 exports.joinCommunity = async (req, res) => {
   try {
     const { communityId } = req.params;
-    const { userId } = req.body;
+    const { userId, contributionAmount } = req.body;
 
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
@@ -66,20 +64,28 @@ exports.joinCommunity = async (req, res) => {
       return res.status(400).json({ message: 'Community is full' });
     }
 
-    const isAlreadyMember = community.members.some(member => member.userId.equals(userId));
+    const isAlreadyMember = community.members.some((member) => member.userId.equals(userId));
     if (isAlreadyMember) {
       return res.status(400).json({ message: 'User is already a member of the community' });
     }
 
-    community.members.push({ userId, status: 'active', penalty: 0 });
+    // Add the user as a member (position remains null if first cycle hasn't started)
+    if (community.cycles.length === 0) {
+      // If no cycle exists, add member and start the first cycle if ready
+      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
+      await community.save();
+
+      await community.startFirstCycle();
+    } else {
+      // If cycles exist, treat it as mid-cycle addition
+      await community.addNewMemberMidCycle(userId, contributionAmount);
+    }
 
     const user = await User.findById(userId);
     if (user && !user.communities.includes(communityId)) {
       user.communities.push(communityId);
       await user.save();
     }
-
-    await community.save();
 
     res.status(200).json({ message: 'Successfully joined the community', community });
   } catch (err) {
@@ -92,12 +98,11 @@ exports.joinCommunity = async (req, res) => {
 exports.startMidCycle = async (req, res) => {
   try {
     const { communityId } = req.params;
+
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const currentCycle = community.cycles.find(c => !c.isComplete);
-    if (!currentCycle) return res.status(400).json({ message: 'No active cycle available to start a mid-cycle.' });
-
+    // Use the schema's method to handle mid-cycle creation
     await community.startMidCycle();
 
     res.status(200).json({ message: 'Mid-cycle started successfully' });
@@ -107,171 +112,226 @@ exports.startMidCycle = async (req, res) => {
   }
 };
 
-// Finalize a mid-cycle
-exports.finalizeMidCycle = async (req, res) => {
+//distribute payouts
+exports.distributePayouts = async (req, res) => {
   try {
     const { communityId } = req.params;
-    const community = await Community.findById(communityId).populate('midCycle');
 
+    const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const currentMidCycle = community.midCycle.find((m) => !m.isComplete);
-    if (!currentMidCycle) return res.status(400).json({ message: 'No active mid-cycle found to finalize.' });
+    // Use the schema's method for payout distribution
+    const result = await community.distributePayouts();
 
-    // Example payout logic
-    for (const contributor of currentMidCycle.contributors) {
-      await User.updateUserContributions(contributor.contributorId, communityId, {
-        amount: contributor.amount,
-        cycleId: currentMidCycle.cycleNumber,
-        midCycleId: currentMidCycle._id,
-      });
-    }
-
-    if (currentMidCycle.missedContributions.length > 0) {
-      for (const missedUserId of currentMidCycle.missedContributions) {
-        await User.updateUserContributions(missedUserId, communityId, {
-          missed: true,
-          cycleId: currentMidCycle.cycleNumber,
-          midCycleId: currentMidCycle._id,
-        });
-      }
-    }
-
-    currentMidCycle.isComplete = true;
-    await community.save();
-
-    res.status(200).json({ message: 'Mid-cycle finalized successfully' });
+    res.status(200).json(result);
   } catch (err) {
-    console.error('Error finalizing mid-cycle:', err);
-    res.status(500).json({ message: 'Error finalizing mid-cycle', error: err.message });
+    console.error('Error distributing payouts:', err);
+    res.status(500).json({ message: 'Error distributing payouts', error: err.message });
   }
 };
 
 // Finalize a complete cycle
-exports.finalizeCompleteCycle = async (req, res) => {
+exports.finalizeCycle = async (req, res) => {
   try {
     const { communityId } = req.params;
+
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const currentCycle = community.cycles.find(c => !c.isComplete);
-    if (!currentCycle) return res.status(400).json({ message: 'No active cycle found to finalize.' });
+    const currentCycle = community.cycles.find((cycle) => !cycle.isComplete);
+    if (!currentCycle) return res.status(400).json({ message: 'No active cycle to finalize.' });
 
-    await community.finalizeCompleteCycle();
+    // Ensure all mid-cycles in the current cycle are complete
+    const allMidCyclesComplete = community.midCycle.every(
+      (midCycle) => midCycle.cycleNumber === currentCycle.cycleNumber && midCycle.isComplete
+    );
 
-    res.status(200).json({ message: 'Complete cycle finalized successfully' });
+    if (!allMidCyclesComplete) {
+      return res.status(400).json({ message: 'Some mid-cycles are incomplete.' });
+    }
+
+    currentCycle.isComplete = true;
+    currentCycle.endDate = new Date();
+
+    await community.save();
+
+    res.status(200).json({ message: 'Cycle finalized successfully', community });
   } catch (err) {
-    console.error('Error finalizing complete cycle:', err);
-    res.status(500).json({ message: 'Error finalizing complete cycle', error: err.message });
+    console.error('Error finalizing cycle:', err);
+    res.status(500).json({ message: 'Error finalizing cycle', error: err.message });
   }
 };
 
-// Update community settings
-exports.updateCommunity = async (req, res) => {
+
+
+exports.recordContribution = async (req, res) => {
   try {
-    const { communityId } = req.params;
-    const { adminId, settings } = req.body;
+    const { communityId, userId, contributions } = req.body;
 
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    if (!community.admin.equals(adminId)) {
-      return res.status(403).json({ message: 'Only the admin can update community settings' });
+    const result = await community.recordContribution(userId, contributions);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error recording contributions:', err);
+    res.status(500).json({ message: 'Error recording contributions', error: err.message });
+  }
+};
+
+
+exports.skipPayoutForDefaulters = async (req, res) => {
+  try {
+    const { communityId, midCycleId } = req.params;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    const result = await community.skipPayoutForDefaulters(midCycleId);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error skipping payout for defaulters:', err);
+    res.status(500).json({ message: 'Error skipping payout for defaulters', error: err.message });
+  }
+};
+
+
+exports.reactivateMember = async (req, res) => {
+  try {
+    const { communityId, userId } = req.params;
+    const { contributionAmount } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    const result = await community.reactivateMember(userId, contributionAmount);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error reactivating member:', err);
+    res.status(500).json({ message: 'Error reactivating member', error: err.message });
+  }
+};
+
+exports.updateSettings = async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const { settings } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    if (settings.firstCycleMin) {
+      await community.syncFirstCycleMin(settings.firstCycleMin);
     }
 
     Object.assign(community.settings, settings);
+
     await community.save();
 
-    res.status(200).json({ message: 'Community settings updated successfully', community });
+    res.status(200).json({ message: 'Settings updated successfully', community });
   } catch (err) {
-    console.error('Error updating community:', err);
-    res.status(500).json({ message: 'Error updating community', error: err.message });
+    console.error('Error updating settings:', err);
+    res.status(500).json({ message: 'Error updating settings', error: err.message });
   }
 };
 
-// Handle community votes
-exports.communityVote = async (req, res) => {
+
+exports.calculateTotalOwed = async (req, res) => {
   try {
-    const { communityId } = req.params;
-    const { userId, topic, choice } = req.body;
+    const { communityId, userId } = req.params;
 
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    if (community.members.length % 2 === 0) {
-      return res.status(400).json({ message: 'Voting can only occur when the number of members is odd.' });
-    }
+    const totalOwed = community.calculateTotalOwed(userId);
 
-    const existingVote = community.votes.find(v => v.topic === topic && !v.resolved);
-    if (!existingVote) {
-      community.votes.push({ topic, options: [choice], votes: [{ userId, choice }] });
-    } else {
-      const userVote = existingVote.votes.find(v => v.userId.equals(userId));
-      if (userVote) {
-        userVote.choice = choice;
-      } else {
-        existingVote.votes.push({ userId, choice });
-      }
-
-      const voteCounts = existingVote.votes.reduce((counts, v) => {
-        counts[v.choice] = (counts[v.choice] || 0) + 1;
-        return counts;
-      }, {});
-
-      const totalVotes = existingVote.votes.length;
-      const adminExtraVote = community.admin.equals(userId) ? 1 : 0;
-
-      Object.keys(voteCounts).forEach(option => {
-        voteCounts[option] += adminExtraVote;
-      });
-
-      const maxVotes = Math.max(...Object.values(voteCounts));
-      const winningChoices = Object.keys(voteCounts).filter(option => voteCounts[option] === maxVotes);
-
-      if (winningChoices.length === 1) {
-        existingVote.resolved = true;
-        existingVote.resolution = winningChoices[0];
-
-        if (topic === 'positioningMode') {
-          community.positioningMode = winningChoices[0];
-        } else if (topic === 'lockPayout') {
-          community.cycleLockEnabled = winningChoices[0] === 'Locked';
-        }
-      }
-    }
-
-    await community.save();
-    res.status(200).json({ message: 'Vote processed successfully', community });
+    res.status(200).json({ totalOwed });
   } catch (err) {
-    console.error('Error handling vote:', err);
-    res.status(500).json({ message: 'Error handling vote', error: err.message });
+    console.error('Error calculating total owed:', err);
+    res.status(500).json({ message: 'Error calculating total owed', error: err.message });
   }
 };
 
-// Delete a community
+
+exports.processBackPayment = async (req, res) => {
+  try {
+    const { communityId, userId } = req.params;
+    const { paymentAmount } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    await community.processBackPayment(userId, paymentAmount);
+
+    res.status(200).json({ message: 'Back payment processed successfully.' });
+  } catch (err) {
+    console.error('Error processing back payment:', err);
+    res.status(500).json({ message: 'Error processing back payment', error: err.message });
+  }
+};
+
+
+exports.applyResolvedVotes = async (req, res) => {
+  try {
+    const { communityId } = req.params;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    await community.applyResolvedVotes();
+
+    res.status(200).json({ message: 'Resolved votes applied successfully.' });
+  } catch (err) {
+    console.error('Error applying resolved votes:', err);
+    res.status(500).json({ message: 'Error applying resolved votes', error: err.message });
+  }
+};
+
+
 exports.deleteCommunity = async (req, res) => {
   try {
     const { communityId } = req.params;
-    const { adminId } = req.body;
 
+    // Find the community by ID
     const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-
-    if (!community.admin.equals(adminId)) {
-      return res.status(403).json({ message: 'Only the admin can delete this community' });
+    if (!community) {
+      return res.status(404).json({ message: 'Community not found' });
     }
 
-    const membersToUpdate = community.members.map(member => member.userId);
-    await User.updateMany(
-      { _id: { $in: membersToUpdate } },
-      { $pull: { communities: communityId } }
-    );
+    // Check if the requestor is the admin of the community
+    const { userId } = req.body; // Assuming userId is sent in the request body
+    if (!community.admin.equals(userId)) {
+      return res.status(403).json({ message: 'You are not authorized to delete this community.' });
+    }
 
-    await community.remove();
+    // Remove the community reference from all member profiles
+    for (const member of community.members) {
+      const user = await User.findById(member.userId);
+      if (user) {
+        user.communities = user.communities.filter((id) => !id.equals(communityId));
+        await user.save();
+      }
+    }
 
-    res.status(200).json({ message: 'Community deleted successfully' });
+    // Handle linked wallets (optional: freeze or notify users)
+    // Example: Unlink wallets if needed, or handle funds before deletion
+    for (const member of community.members) {
+      const wallet = await Wallet.findOne({ userId: member.userId });
+      if (wallet) {
+        // Optionally perform wallet operations here
+        console.log(`Wallet handled for user: ${member.userId}`);
+      }
+    }
+
+    // Delete the community
+    await Community.findByIdAndDelete(communityId);
+
+    res.status(200).json({ message: 'Community deleted successfully.' });
   } catch (err) {
     console.error('Error deleting community:', err);
-    res.status(500).json({ message: 'Error deleting community', error: err.message });
+    res.status(500).json({ message: 'Error deleting community.', error: err.message });
   }
 };

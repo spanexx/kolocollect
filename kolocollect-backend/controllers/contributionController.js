@@ -1,10 +1,9 @@
-//controllers/contributionController.js
+// controllers/contributionController.js
 
 const Contribution = require('../models/Contribution');
 const Community = require('../models/Community');
-const { updateCommunity } = require('./communityController');
+const User = require('../models/User');
 const Wallet = require('../models/Wallet');
-
 
 // Get all contributions
 exports.getContributions = async (req, res) => {
@@ -32,50 +31,40 @@ exports.getContributionById = async (req, res) => {
 // Create a new contribution
 exports.createContribution = async (req, res) => {
   try {
-    const { userId, communityId, amount, contributionDate } = req.body;
+    const { userId, communityId, amount, contributionDate, cycleId, midCycleId } = req.body;
 
-    // Check for missing required fields
-    if (!userId || !communityId || !amount || !contributionDate) {
+    if (!userId || !communityId || !amount || !cycleId || !midCycleId) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Check if the community exists
+    // Validate community existence
     const community = await Community.findById(communityId);
-    if (!community) {
-      return res.status(404).json({ message: 'Community not found' });
-    }
+    if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    // Get the user's wallet to check balance
+    // Validate user wallet balance
     const wallet = await Wallet.findOne({ userId });
     if (!wallet || wallet.availableBalance < amount) {
-      return res.status(400).json({ message: 'Insufficient funds in wallet' });
+      return res.status(400).json({ message: 'Insufficient wallet balance' });
     }
 
-    // Deduct the contribution amount from the user's wallet
+    // Deduct amount from wallet
     wallet.availableBalance -= amount;
-    await wallet.addTransaction(amount, 'contribution', `Contribution to community ${community.name}`);
+    await wallet.save();
 
-    // Create the contribution document
+    // Create contribution
     const newContribution = new Contribution({
       userId,
       communityId,
       amount,
       contributionDate,
+      cycleId,
+      midCycleId,
       status: 'Completed',
     });
     await newContribution.save();
 
-    // Update the community's total contributions
-    community.totalContributions = (community.totalContributions || 0) + amount;
-    community.contributionList = [
-      ...(community.contributionList || []),
-      {
-        userId,
-        amount,
-        contributionDate,
-      },
-    ];
-    await community.save();
+    // Update community and user contributions
+    await newContribution.linkToUserAndCommunity();
 
     res.status(201).json({ message: 'Contribution created successfully', contribution: newContribution });
   } catch (err) {
@@ -84,59 +73,41 @@ exports.createContribution = async (req, res) => {
   }
 };
 
-
 // Update a contribution
 exports.updateContribution = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount: newAmount, userId, communityId } = req.body;
+    const { amount: newAmount } = req.body;
 
-    const updatedContribution = await Contribution.findById(id);
-    if (!updatedContribution) {
+    const contribution = await Contribution.findById(id);
+    if (!contribution) {
       return res.status(404).json({ message: 'Contribution not found' });
     }
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) {
-      return res.status(400).json({ message: 'Wallet not found for user' });
-    }
+    const oldAmount = contribution.amount;
 
-    // Adjust wallet if the amount changes
-    const oldAmount = updatedContribution.amount;
+    // Update wallet balance if amount changes
     if (newAmount !== oldAmount) {
-      // Update wallet by deducting oldAmount and adding newAmount
-      wallet.availableBalance += oldAmount; // Reverse old contribution
-      await wallet.addTransaction(oldAmount, 'contribution', `Reversed contribution update (Contribution ID: ${id})`);
-      
-      wallet.availableBalance -= newAmount; // Deduct new contribution
-      await wallet.addTransaction(newAmount, 'contribution', `Updated contribution (Contribution ID: ${id})`);
+      const wallet = await Wallet.findOne({ userId: contribution.userId });
+      if (!wallet) {
+        return res.status(404).json({ message: 'Wallet not found' });
+      }
+
+      wallet.availableBalance += oldAmount; // Revert old amount
+      wallet.availableBalance -= newAmount; // Deduct new amount
+      await wallet.save();
     }
 
-    // Update the contribution amount
-    updatedContribution.amount = newAmount;
-    await updatedContribution.save();
+    // Update contribution details
+    contribution.amount = newAmount;
+    await contribution.save();
 
-    // Adjust community total contributions
-    const community = await Community.findById(communityId);
-    if (!community) {
-      return res.status(404).json({ message: 'Community not found' });
-    }
+    // Update user and community
+    await contribution.linkToUserAndCommunity();
 
-    community.totalContributions -= oldAmount; // Remove old amount
-    community.totalContributions += newAmount; // Add new amount
-
-    // Update contribution list (optional, if needed)
-    const contributionIndex = community.contributionList.findIndex(
-      (contrib) => contrib.userId.toString() === userId.toString()
-    );
-    if (contributionIndex !== -1) {
-      community.contributionList[contributionIndex].amount = newAmount;
-    }
-
-    await community.save();
-
-    res.status(200).json(updatedContribution);
+    res.status(200).json({ message: 'Contribution updated successfully', contribution });
   } catch (err) {
+    console.error('Error updating contribution:', err);
     res.status(500).json({ message: 'Error updating contribution', error: err.message });
   }
 };
@@ -145,64 +116,56 @@ exports.updateContribution = async (req, res) => {
 exports.deleteContribution = async (req, res) => {
   try {
     const { id } = req.params;
+
     const contribution = await Contribution.findByIdAndDelete(id);
     if (!contribution) {
       return res.status(404).json({ message: 'Contribution not found' });
     }
 
-    // Revert the wallet balance
+    // Revert wallet balance
     const wallet = await Wallet.findOne({ userId: contribution.userId });
     if (wallet) {
       wallet.availableBalance += contribution.amount;
-      wallet.totalBalance += contribution.amount;
-      wallet.transactions.push({
-        amount: contribution.amount,
-        type: 'withdrawal',
-        description: `Reversed contribution (Contribution ID: ${id})`,
-      });
       await wallet.save();
-    }
-
-    // Adjust community's total contributions
-    const community = await Community.findById(contribution.communityId);
-    if (community) {
-      community.totalContributions -= contribution.amount;
-      // Optionally, remove the contribution from the community's list
-      community.contributionList = community.contributionList.filter(
-        (contrib) => contrib.userId.toString() !== contribution.userId.toString()
-      );
-      await community.save();
     }
 
     res.status(200).json({ message: 'Contribution deleted successfully' });
   } catch (err) {
+    console.error('Error deleting contribution:', err);
     res.status(500).json({ message: 'Error deleting contribution', error: err.message });
   }
 };
 
-
-// Get all contributions by community
+// Get contributions by community
 exports.getContributionsByCommunity = async (req, res) => {
   try {
-    const contributions = await Contribution.find({ communityId: req.params.communityId });
+    const { communityId } = req.params;
+    const contributions = await Contribution.find({ communityId });
+
     if (!contributions.length) {
       return res.status(404).json({ message: 'No contributions found for this community' });
     }
+
     res.status(200).json(contributions);
   } catch (err) {
+    console.error('Error fetching community contributions:', err);
     res.status(500).json({ message: 'Error fetching contributions', error: err.message });
   }
 };
 
-// Get all contributions by user
+// Get contributions by user
 exports.getContributionsByUser = async (req, res) => {
   try {
-    const contributions = await Contribution.find({ userId: req.params.userId });
+    const { userId } = req.params;
+    const contributions = await Contribution.find({ userId });
+
     if (!contributions.length) {
       return res.status(404).json({ message: 'No contributions found for this user' });
     }
+
     res.status(200).json(contributions);
   } catch (err) {
+    console.error('Error fetching user contributions:', err);
     res.status(500).json({ message: 'Error fetching contributions', error: err.message });
   }
 };
