@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const Community = require('./Community'); // Import Community model
 
 // Transaction Schema to track deposits, withdrawals, and other activities
 const transactionSchema = new Schema(
@@ -11,7 +10,6 @@ const transactionSchema = new Schema(
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
     date: { type: Date, default: Date.now },
-    communityId: { type: Schema.Types.ObjectId, ref: 'Community' }, // Added community reference
   },
   { timestamps: true }
 );
@@ -37,18 +35,13 @@ const walletSchema = new mongoose.Schema({
   isFrozen: { type: Boolean, default: false },
 });
 
-// Add a virtual for total balance
-walletSchema.virtual('totalBalance').get(function () {
-  return this.availableBalance + this.fixedBalance;
-});
-
 // Method to add a transaction and adjust balances
 walletSchema.methods.addTransaction = async function (amount, type, description, recipient, communityId) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No transactions allowed.');
   }
 
-  if (type === 'penalty' || type === 'withdrawal') {
+  if (type === 'withdrawal' || type === 'transfer' || type === 'penalty') {
     if (this.availableBalance < amount) {
       throw new Error('Insufficient balance for the transaction.');
     }
@@ -69,16 +62,83 @@ walletSchema.methods.addTransaction = async function (amount, type, description,
   await this.save();
 };
 
+// Method to withdraw funds (ensures no withdrawal when wallet is frozen)
+walletSchema.methods.withdrawFunds = async function (amount) {
+  if (this.isFrozen) {
+    throw new Error('Wallet is frozen. No withdrawals allowed.');
+  }
+  if (this.availableBalance < amount) {
+    throw new Error('Insufficient balance for withdrawal.');
+  }
+
+  this.availableBalance -= amount;
+  this.totalBalance = this.availableBalance + this.fixedBalance;
+
+  this.transactions.push({
+    amount,
+    type: 'withdrawal',
+    description: 'Manual withdrawal',
+  });
+
+  await this.save();
+};
+
+// Method to transfer funds (ensures no transfer when wallet is frozen)
+walletSchema.methods.transferFunds = async function (amount, recipientWalletId) {
+  if (this.isFrozen) {
+    throw new Error('Wallet is frozen. No transfers allowed.');
+  }
+  if (this.availableBalance < amount) {
+    throw new Error('Insufficient balance for transfer.');
+  }
+
+  this.availableBalance -= amount;
+  this.totalBalance = this.availableBalance + this.fixedBalance;
+
+  this.transactions.push({
+    amount,
+    type: 'transfer',
+    description: `Transfer to wallet ID ${recipientWalletId}`,
+    recipient: recipientWalletId,
+  });
+
+  await this.save();
+
+  // Update the recipient's wallet
+  const recipientWallet = await mongoose.model('Wallet').findById(recipientWalletId);
+  if (!recipientWallet) {
+    throw new Error('Recipient wallet not found.');
+  }
+
+  recipientWallet.availableBalance += amount;
+  recipientWallet.totalBalance = recipientWallet.availableBalance + recipientWallet.fixedBalance;
+
+  recipientWallet.transactions.push({
+    amount,
+    type: 'deposit',
+    description: `Transfer from wallet ID ${this._id}`,
+    recipient: this.userId,
+  });
+
+  await recipientWallet.save();
+};
+
 // Method to deduct penalties
 walletSchema.methods.deductPenalty = async function (penaltyAmount) {
-  if (this.availableBalance < penaltyAmount)
-    throw new Error('Insufficient balance for penalty deduction');
+  if (this.isFrozen) {
+    throw new Error('Wallet is frozen. No penalty deduction allowed.');
+  }
+  if (this.availableBalance < penaltyAmount) {
+    throw new Error('Insufficient balance for penalty deduction.');
+  }
+
   this.availableBalance -= penaltyAmount;
   this.transactions.push({
     amount: penaltyAmount,
-    type: 'withdrawal',
+    type: 'penalty',
     description: 'Penalty deduction',
   });
+
   await this.save();
 };
 

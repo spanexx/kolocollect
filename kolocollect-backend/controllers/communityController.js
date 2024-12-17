@@ -61,31 +61,42 @@ exports.joinCommunity = async (req, res) => {
     const { communityId } = req.params;
     const { userId, contributionAmount } = req.body;
 
+    // Fetch the community
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
+    // Check if the community is full
     if (community.members.length >= community.settings.maxMembers) {
       return res.status(400).json({ message: 'Community is full' });
     }
 
-    const isAlreadyMember = community.members.some((member) => member.userId.equals(userId));
+    // Check if the user is already a member
+    const isAlreadyMember = community.members.some(
+      (member) => member.userId && member.userId.toString() === userId
+    );
     if (isAlreadyMember) {
       return res.status(400).json({ message: 'User is already a member of the community' });
-
     }
 
-    // Add the user as a member (position remains null if first cycle hasn't started)
-    if (community.cycles.length === 0) {
-      // If no cycle exists, add member and start the first cycle if ready
-      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
-      await community.save();
+    // Determine the state of the community
+    const activeCycle = community.cycles.find(c => !c.isComplete);
+    const activeMidCycle = community.midCycle.find(mc => !mc.isComplete);
 
-      await community.startFirstCycle();
+    if (!activeCycle) {
+      // If no cycle exists, allow user to join and check firstCycleMin
+      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
+    } else if (activeCycle.cycleNumber === 1 && activeMidCycle) {
+      // If first cycle's mid-cycle is active, allow user to join WITHOUT a position
+      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
     } else {
-      // If cycles exist, treat it as mid-cycle addition
+      // If mid-cycle is NOT active or it's a new cycle, handle as mid-cycle addition
       await community.addNewMemberMidCycle(userId, contributionAmount);
     }
 
+    // Save the updated community
+    await community.save();
+
+    // Add the community to the user's list
     const user = await User.findById(userId);
     if (user && !user.communities.includes(communityId)) {
       user.communities.push(communityId);
@@ -96,9 +107,9 @@ exports.joinCommunity = async (req, res) => {
   } catch (err) {
     console.error('Error joining community:', err);
     createErrorResponse(res, 500, 'Error joining community. Please try again.');
-
   }
 };
+
 
 
 exports.getCommunityById = async (req, res) => {

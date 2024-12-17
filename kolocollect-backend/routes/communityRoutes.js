@@ -12,7 +12,7 @@ router.post('/join/:communityId', communityController.joinCommunity);
 router.post('/midcycle/start/:communityId', communityController.startMidCycle);
 
 // Route to finalize a mid-cycle
-router.post('/midcycle/finalize/:communityId', communityController.finalizeMidCycle);
+// router.post('/midcycle/finalize/:communityId', communityController.finalizeMidCycle);
 
 // Route to finalize a complete cycle
 router.post('/cycle/finalize/:communityId', communityController.finalizeCycle);

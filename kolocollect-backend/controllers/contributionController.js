@@ -34,9 +34,9 @@ exports.getContributionById = async (req, res) => {
 // Create a new contribution
 exports.createContribution = async (req, res) => {
   try {
-    const { userId, communityId, amount, contributionDate, cycleId, midCycleId } = req.body;
+    const { userId, communityId, amount, contributionDate, cycleNumber, midCycleId } = req.body;
 
-    if (!userId || !communityId || !amount || !cycleId || !midCycleId) {
+    if (!userId || !communityId || !amount || cycleNumber === undefined || !midCycleId) {
       return createErrorResponse(res, 400, 'Missing required fields.');
     }
 
@@ -53,7 +53,7 @@ exports.createContribution = async (req, res) => {
       communityId,
       amount,
       contributionDate,
-      cycleId,
+      cycleNumber,
       midCycleId,
       status: 'completed',
     });
@@ -68,6 +68,7 @@ exports.createContribution = async (req, res) => {
     createErrorResponse(res, 500, 'Server error while creating contribution.');
   }
 };
+
 
 // Update a contribution
 exports.updateContribution = async (req, res) => {

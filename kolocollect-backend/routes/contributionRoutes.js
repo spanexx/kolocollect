@@ -26,10 +26,10 @@ router.get('/community/:communityId', contributionController.getContributionsByC
 router.get('/user/:userId', contributionController.getContributionsByUser);
 
 // Get all contributions in mid-cycles for a community
-router.get('/community/:communityId/midcycles', contributionController.getMidCycleContributions);
+// router.get('/community/:communityId/midcycles', contributionController.getMidCycleContributions);
 
 // Fetch all contributions for a specific mid-cycle
-router.get('/midcycle/:midCycleId', contributionController.getContributionsByMidCycle);
+// router.get('/midcycle/:midCycleId', contributionController.getContributionsByMidCycle);
 
 
 module.exports = router;

@@ -87,6 +87,21 @@ const CommunitySchema = new mongoose.Schema({
     }],
 }, { timestamps: true });
 
+CommunitySchema.methods.syncMidCyclesToCycles = async function () {
+    try {
+        this.cycles.forEach((cycle) => {
+            const relatedMidCycles = this.midCycle.filter((mc) => mc.cycleNumber === cycle.cycleNumber);
+            cycle.midCycles = relatedMidCycles.map((mc) => mc._id); // Sync only the relevant mid-cycles
+        });
+        await this.save();
+    } catch (err) {
+        console.error('Error syncing mid-cycles to cycles:', err);
+        throw err;
+    }
+};
+
+
+
 // Sync and Validate firstCycleMin
 CommunitySchema.methods.syncFirstCycleMin = async function (newFirstCycleMin) {
     // Enforce a minimum of 5
@@ -101,6 +116,24 @@ CommunitySchema.methods.syncFirstCycleMin = async function (newFirstCycleMin) {
     // Save the updated document
     await this.save();
 };
+
+// Post-save hook to check member count and start the first cycle
+CommunitySchema.post('save', async function (doc, next) {
+    try {
+      // Ensure no cycles exist and member count matches the firstCycleMin
+      if (doc.cycles.length === 0 && doc.members.length >= doc.firstCycleMin) {
+        console.log('First cycle conditions met, starting first cycle...');
+        const result = await doc.startFirstCycle();
+        console.log(result.message); // Log success message for debugging
+      }
+    } catch (err) {
+      console.error('Error in post-save hook for starting first cycle:', err);
+      next(err); // Pass the error to Mongoose middleware chain
+    } finally {
+      next(); // Ensure next middleware is called to avoid hanging
+    }
+  });
+  
 
 // Hook to validate settings update
 CommunitySchema.pre('save', function (next) {
@@ -166,7 +199,7 @@ CommunitySchema.methods.isCompleteCycle = function () {
 CommunitySchema.methods.startFirstCycle = async function () {
     try {
         // Ensure there are no cycles yet and the minimum required members have joined
-        if (this.cycles.length === 0 && this.members.length === this.firstCycleMin) {
+        if (this.cycles.length === 0 && this.members.length >= this.firstCycleMin) {
             const firstCycle = {
                 cycleNumber: 1,
                 midCycles: [],
@@ -174,17 +207,16 @@ CommunitySchema.methods.startFirstCycle = async function () {
                 startDate: new Date(),
             };
 
-            // Assign admin to position 1 (already done during community creation)
+            // Ensure the admin is assigned position 1
             const adminMember = this.members.find(member => member.position === 1);
             if (!adminMember) {
                 throw new Error('Admin must have position 1 before the first cycle starts.');
             }
 
-            // Get non-admin members
+            // Assign random positions to non-admin members for the first cycle
             const nonAdminMembers = this.members.filter(member => member.position !== 1);
-
-            // Assign random positions starting from 2 to `firstCycleMin` for non-admin members
             const assignedPositions = [];
+
             nonAdminMembers.forEach(member => {
                 let randomPosition;
                 do {
@@ -196,14 +228,21 @@ CommunitySchema.methods.startFirstCycle = async function () {
 
             // Add the first cycle to the community
             this.cycles.push(firstCycle);
-
             await this.save();
+
+            // Automatically start the first mid-cycle
+            await this.startMidCycle();
+
+            return { message: 'First cycle and its mid-cycle have started successfully.' };
+        } else {
+            throw new Error('First cycle cannot start due to insufficient members or existing cycles.');
         }
     } catch (err) {
         console.error('Error starting first cycle:', err);
         throw err;
     }
 };
+
 
 // Handle new members joining mid-cycle (first cycle rule)
 CommunitySchema.methods.addNewMemberMidCycle = async function (userId, contributionAmount) {
@@ -312,38 +351,44 @@ CommunitySchema.methods.applyResolvedVotes = async function () {
 
 // Start a new mid-cycle
 CommunitySchema.methods.startMidCycle = async function () {
-    const currentCycle = this.cycles.find(c => !c.isComplete);
-    if (!currentCycle) throw new Error('No active cycle found.');
+    try {
+        const currentCycle = this.cycles.find((c) => !c.isComplete);
+        if (!currentCycle) throw new Error('No active cycle found.');
 
-    const nextInLine = this.members.find(m => m.position === currentCycle.midCycles.length + 1);
-    if (!nextInLine) throw new Error('No eligible member for payout.');
+        const nextInLine = this.members.find((m) => m.position === currentCycle.midCycles.length + 1);
+        if (!nextInLine) throw new Error('No eligible member for payout.');
 
-    this.midCycle.push({
-        cycleNumber: currentCycle.cycleNumber,
-        nextInLine: { userId: nextInLine.userId },
-        contributors: [],
-        missedContributions: [],
-    });
+        // Add new mid-cycle
+        const newMidCycle = {
+            cycleNumber: currentCycle.cycleNumber,
+            nextInLine: { userId: nextInLine.userId },
+            contributors: [],
+            missedContributions: [],
+        };
+        this.midCycle.push(newMidCycle);
 
-    await this.save();
+        // Sync changes to cycles
+        await this.syncMidCyclesToCycles();
+        return { message: 'Mid-cycle started successfully.' };
+    } catch (err) {
+        console.error('Error in startMidCycle:', err);
+        throw err;
+    }
 };
+
+
 
 CommunitySchema.methods.recordContribution = async function (contributorId, contributions) {
     try {
-        const activeMidCycle = this.midCycle.find(c => !c.isComplete);
+        const activeMidCycle = this.midCycle.find((c) => !c.isComplete);
         if (!activeMidCycle) throw new Error('No active mid-cycle found.');
 
-        const contributor = activeMidCycle.contributors.find(c => c.contributorId.equals(contributorId));
+        const contributor = activeMidCycle.contributors.find((c) => c.contributorId.equals(contributorId));
         if (!contributor) {
-            // If contributor is not yet recorded, add them
-            activeMidCycle.contributors.push({
-                contributorId,
-                contributions,
-            });
+            activeMidCycle.contributors.push({ contributorId, contributions });
         } else {
-            // Update existing contributions
-            contributions.forEach(contribution => {
-                const existing = contributor.contributions.find(c => c.recipientId.equals(contribution.recipientId));
+            contributions.forEach((contribution) => {
+                const existing = contributor.contributions.find((c) => c.recipientId.equals(contribution.recipientId));
                 if (existing) {
                     existing.amount += contribution.amount;
                 } else {
@@ -352,13 +397,16 @@ CommunitySchema.methods.recordContribution = async function (contributorId, cont
             });
         }
 
-        await this.save();
+        // Sync changes to cycles
+        await this.syncMidCyclesToCycles();
         return { message: 'Contributions recorded successfully.' };
     } catch (err) {
         console.error('Error recording contributions:', err);
         throw err;
     }
 };
+
+
 
 CommunitySchema.methods.validateContributions = async function () {
     const currentMidCycle = this.midCycle.find(c => !c.isComplete);
@@ -380,82 +428,39 @@ CommunitySchema.methods.validateContributions = async function () {
 // Distribute payouts to the next in line
 CommunitySchema.methods.distributePayouts = async function () {
     try {
-        // Find the current mid-cycle that is not completed
         const currentMidCycle = this.midCycle.find((cycle) => !cycle.isComplete);
         if (!currentMidCycle) throw new Error('No active mid-cycle found for payout distribution.');
 
-        // Identify the next-in-line member for payout
-        const nextInLine = this.members.find(m => m.userId.equals(currentMidCycle.nextInLine.userId));
+        const nextInLine = this.members.find((m) => m.userId.equals(currentMidCycle.nextInLine.userId));
         if (!nextInLine) throw new Error('No eligible member for payout.');
 
-        // Calculate the total contributions from all contributors
-        // Custom contribution logic ensures contributions are summed for each recipient
         const totalContributions = currentMidCycle.contributors.reduce((sum, contributor) => {
             return sum + contributor.contributions.reduce((subSum, c) => subSum + c.amount, 0);
         }, 0);
 
-        // Deduct a percentage of the total contributions for the backup fund
         const backupDeduction = (totalContributions * this.settings.backupFundPercentage) / 100;
-        const payoutAmount = totalContributions - backupDeduction; // Remaining amount for payout
+        const payoutAmount = totalContributions - backupDeduction;
 
-        // Update the community's backup fund with the deducted amount
         this.backupFund += backupDeduction;
 
-        // Locate the wallet of the next-in-line member
         const wallet = await mongoose.model('Wallet').findOne({ userId: nextInLine.userId });
         if (!wallet) throw new Error('User wallet not found.');
 
-        // Add the payout amount to the next-in-line member's wallet balance
         wallet.availableBalance += payoutAmount;
         await wallet.save();
 
-        // Log the payout action in the next-in-line member's activity log
-        const user = await mongoose.model('User').findById(nextInLine.userId);
-        if (user) {
-            user.activityLog.push({
-                action: 'payout',
-                details: `Received payout of €${payoutAmount.toFixed(2)} for mid-cycle in community ${this._id}`,
-            });
-            await user.save();
-        }
-
-        // Mark the current mid-cycle as complete and record the payout amount
         currentMidCycle.isComplete = true;
         currentMidCycle.payoutAmount = payoutAmount;
 
-        // Process penalties for members who missed their contributions
-        for (const missedId of currentMidCycle.missedContributions) {
-            const member = this.members.find((m) => m.userId.equals(missedId));
-            if (member) {
-                // Increment the penalty amount for the member
-                member.penalty += this.settings.penalty;
+        await this.syncMidCyclesToCycles(); // Sync changes after updates
 
-                // Log the missed contribution details
-                member.missedContributions.push({
-                    cycleNumber: currentMidCycle.cycleNumber,
-                    midCycles: [currentMidCycle._id],
-                    amount: this.settings.penalty,
-                    nextInLineMissed: { userId: nextInLine.userId },
-                });
-
-                // Mark the member as inactive if they exceed the allowed missed contributions
-                if (member.missedContributions.length >= this.settings.numMissContribution) {
-                    member.status = 'inactive';
-                }
-            }
-        }
-
-        // Save the updated community state to the database
-        await this.save();
-
-        // Return a success message with payout details
         return { message: `Payout of €${payoutAmount.toFixed(2)} distributed to ${nextInLine.userId}.` };
     } catch (err) {
-        // Log and re-throw any errors that occur during the payout process
         console.error('Error distributing payouts:', err);
         throw err;
     }
 };
+
 
 // Handle new members joining mid-cycle
 CommunitySchema.methods.addNewMemberMidCycle = async function (userId) {
