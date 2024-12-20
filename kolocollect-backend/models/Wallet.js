@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+
 // Transaction Schema to track deposits, withdrawals, and other activities
 const transactionSchema = new Schema(
   {
@@ -14,6 +15,7 @@ const transactionSchema = new Schema(
   { timestamps: true }
 );
 
+
 // Fixed Funds Schema to track funds that are locked for a specific duration
 const fixedFundsSchema = new Schema(
   {
@@ -25,6 +27,7 @@ const fixedFundsSchema = new Schema(
   { timestamps: true }
 );
 
+
 // Wallet Schema to store balance, transactions, and fixed funds for each user
 const walletSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -34,6 +37,32 @@ const walletSchema = new mongoose.Schema({
   transactions: [transactionSchema],
   isFrozen: { type: Boolean, default: false },
 });
+
+// Helper function to update user notifications and activity logs
+async function updateUserActivity(userId, activityMessage) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found.');
+
+    // Add a notification
+    user.notifications.push({
+      message: activityMessage,
+      date: new Date(),
+    });
+
+    // Log the activity
+    user.activityLog.push({
+      action: activityMessage,
+      date: new Date(),
+    });
+
+    await user.save();
+  } catch (err) {
+    console.error('Error updating user notifications or activity log:', err);
+  }
+}
+
+
 
 // Method to add a transaction and adjust balances
 walletSchema.methods.addTransaction = async function (amount, type, description, recipient, communityId) {
@@ -60,9 +89,13 @@ walletSchema.methods.addTransaction = async function (amount, type, description,
 
   this.totalBalance = this.availableBalance + this.fixedBalance;
   await this.save();
+
+  // Update the user's notifications and activity log
+  const activityMessage = `Wallet updated: ${description || type} of €${amount}.`;
+  await updateUserActivity(this.userId, activityMessage);
 };
 
-// Method to withdraw funds (ensures no withdrawal when wallet is frozen)
+// Method to withdraw funds
 walletSchema.methods.withdrawFunds = async function (amount) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No withdrawals allowed.');
@@ -81,9 +114,13 @@ walletSchema.methods.withdrawFunds = async function (amount) {
   });
 
   await this.save();
+
+  // Update user notifications and activity log
+  const activityMessage = `Withdrawal of €${amount} processed successfully.`;
+  await updateUserActivity(this.userId, activityMessage);
 };
 
-// Method to transfer funds (ensures no transfer when wallet is frozen)
+// Method to transfer funds
 walletSchema.methods.transferFunds = async function (amount, recipientWalletId) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No transfers allowed.');
@@ -104,7 +141,6 @@ walletSchema.methods.transferFunds = async function (amount, recipientWalletId) 
 
   await this.save();
 
-  // Update the recipient's wallet
   const recipientWallet = await mongoose.model('Wallet').findById(recipientWalletId);
   if (!recipientWallet) {
     throw new Error('Recipient wallet not found.');
@@ -121,6 +157,10 @@ walletSchema.methods.transferFunds = async function (amount, recipientWalletId) 
   });
 
   await recipientWallet.save();
+
+  // Update notifications for both sender and recipient
+  await updateUserActivity(this.userId, `Transfer of €${amount} sent to Wallet ID ${recipientWalletId}.`);
+  await updateUserActivity(recipientWallet.userId, `Transfer of €${amount} received from Wallet ID ${this._id}.`);
 };
 
 // Method to deduct penalties
@@ -142,10 +182,12 @@ walletSchema.methods.deductPenalty = async function (penaltyAmount) {
   await this.save();
 };
 
+
 // Method to check if fixed funds have matured
 fixedFundsSchema.methods.checkMaturity = function () {
   return this.isMatured || new Date() >= this.endDate;
 };
+
 
 // Indexing on userId for faster lookups
 walletSchema.index({ userId: 1 });

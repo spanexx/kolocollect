@@ -1,5 +1,32 @@
 const Wallet = require('../models/Wallet');
 const createErrorResponse = (res, status, message) => res.status(status).json({ error: { message } });
+const User = require('../models/User');
+
+exports.createWallet = async (req, res) => {
+  try {
+    const { userId, availableBalance, fixedBalance, totalBalance } = req.body;
+
+    const existingWallet = await Wallet.findOne({ userId });
+    if (existingWallet) {
+      return res.status(400).json({ message: 'Wallet already exists for this user.' });
+    }
+
+    const newWallet = new Wallet({
+      userId,
+      availableBalance: availableBalance || 0,
+      fixedBalance: fixedBalance || 0,
+      totalBalance: totalBalance || 0,
+      transactions: [],
+    });
+
+    await newWallet.save();
+    res.status(201).json({ message: 'Wallet created successfully.', wallet: newWallet });
+  } catch (err) {
+    console.error('Error creating wallet:', err);
+    res.status(500).json({ message: 'Failed to create wallet.' });
+  }
+};
+
 
 // Add Funds
 exports.addFunds = async (req, res) => {
@@ -25,12 +52,19 @@ exports.addFunds = async (req, res) => {
 
     await wallet.save();
 
+    // Add notification to user
+    const user = await User.findById(userId);
+    if (user) {
+      await user.addNotification('info', `€${amount} has been added to your wallet.`);
+    }
+
     res.status(200).json({ message: `Successfully added €${amount} to wallet.`, wallet });
   } catch (err) {
     console.error('Error adding funds:', err);
     createErrorResponse(res, 500, 'Failed to add funds.');
   }
 };
+
 
 // Withdraw Funds
 exports.withdrawFunds = async (req, res) => {
@@ -64,12 +98,19 @@ exports.withdrawFunds = async (req, res) => {
 
     await wallet.save();
 
+    // Add notification to user
+    const user = await User.findById(userId);
+    if (user) {
+      await user.addNotification('info', `€${amount} has been withdrawn from your wallet.`);
+    }
+
     res.status(200).json({ message: `Successfully withdrew €${amount} from wallet.`, wallet });
   } catch (err) {
     console.error('Error withdrawing funds:', err);
     createErrorResponse(res, 500, 'Failed to withdraw funds.');
   }
 };
+
 
 // Transfer Funds
 exports.transferFunds = async (req, res) => {
@@ -94,23 +135,38 @@ exports.transferFunds = async (req, res) => {
       return createErrorResponse(res, 400, 'Insufficient funds for transfer.');
     }
 
+    // Update sender's wallet
     senderWallet.availableBalance -= amount;
     senderWallet.transactions.push({
       amount,
       type: 'transfer',
-      description: description || `Transferred €${amount}`,
+      description: description || `Transferred €${amount} to recipient.`,
       recipient: recipientId,
     });
 
+    // Update recipient's wallet
     recipientWallet.availableBalance += amount;
     recipientWallet.transactions.push({
       amount,
       type: 'deposit',
-      description: description || `Received €${amount}`,
+      description: description || `Received €${amount} from sender.`,
+      recipient: userId,
     });
 
     await senderWallet.save();
     await recipientWallet.save();
+
+    // Add notifications for both sender and recipient
+    const sender = await User.findById(userId);
+    const recipient = await User.findById(recipientId);
+
+    if (sender) {
+      await sender.addNotification('info', `You transferred €${amount} to ${recipientId}.`);
+    }
+
+    if (recipient) {
+      await recipient.addNotification('info', `You received €${amount} from ${userId}.`);
+    }
 
     res.status(200).json({ message: `Successfully transferred €${amount}.`, senderWallet, recipientWallet });
   } catch (err) {
@@ -118,6 +174,7 @@ exports.transferFunds = async (req, res) => {
     createErrorResponse(res, 500, 'Failed to transfer funds.');
   }
 };
+
 
 // Get Transaction History
 exports.getTransactionHistory = async (req, res) => {
@@ -134,24 +191,31 @@ exports.getTransactionHistory = async (req, res) => {
   }
 };
 
+
 // Fix Funds
 exports.fixFunds = async (req, res) => {
   try {
     const { userId, amount, duration } = req.body;
 
+    // Validate input
     if (!amount || amount <= 0 || !duration) {
       return createErrorResponse(res, 400, 'Invalid amount or duration.');
     }
 
+    // Find wallet
     const wallet = await Wallet.findOne({ userId });
     if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
 
+    // Check for sufficient balance
     if (wallet.availableBalance < amount) {
       return createErrorResponse(res, 400, 'Insufficient funds for fixing.');
     }
 
+    // Deduct funds from available balance and add to fixed balance
     wallet.availableBalance -= amount;
     wallet.fixedBalance += amount;
+
+    // Add transaction entry
     wallet.transactions.push({
       amount,
       type: 'fix',
@@ -160,12 +224,27 @@ exports.fixFunds = async (req, res) => {
 
     await wallet.save();
 
+    // Update User Notification
+    const user = await User.findById(userId);
+    if (user) {
+      const notificationMessage = `You have fixed €${amount} for ${duration} days.`;
+      await user.addNotification('info', notificationMessage);
+
+      // Add to activity log
+      user.activityLog.push({
+        action: 'Fixed Funds',
+        details: `Fixed €${amount} for ${duration} days.`,
+      });
+      await user.save();
+    }
+
     res.status(200).json({ message: 'Funds fixed successfully.', wallet });
   } catch (err) {
     console.error('Error fixing funds:', err);
     createErrorResponse(res, 500, 'Failed to fix funds.');
   }
 };
+
 
 // Get Fixed Funds
 exports.getFixedFunds = async (req, res) => {

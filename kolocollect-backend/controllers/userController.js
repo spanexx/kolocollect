@@ -264,6 +264,23 @@ exports.getUserTotalOwed = async (req, res) => {
   }
 };
 
+exports.getUserPayouts = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).populate('contributions.communityId', 'name');
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    res.status(200).json({
+      upcomingPayouts: user.upcomingPayouts,
+    });
+  } catch (err) {
+    console.error('Error fetching user payouts:', err);
+    res.status(500).json({ message: 'Error fetching user payouts.' });
+  }
+};
+
+
 //Reusable Helper for Fetching User with Wallet
 const getUserWithWallet = async (userId) => {
   const user = await User.findById(userId).select('-password');
@@ -275,6 +292,7 @@ const getUserWithWallet = async (userId) => {
 
   return { user, wallet };
 };
+
 
 
 // Delete User

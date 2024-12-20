@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const communityController = require('../controllers/communityController');
+const User = require('../models/User')
+
+
+//Route to get All Communities
+router.get('/', communityController.getAllCommunities);
+
 
 // Route to create a new community
 router.post('/create', communityController.createCommunity);
@@ -46,5 +52,9 @@ router.post('/votes/apply/:communityId', communityController.applyResolvedVotes)
 
 //Fetch All Contributions in Mid-Cycles
 router.get('/:communityId/midcycle-contributions', communityController.getMidCycleContributions);
+
+
+router.get('/payout/:communityId', communityController.getPayoutInfo);
+
 
 module.exports = router;

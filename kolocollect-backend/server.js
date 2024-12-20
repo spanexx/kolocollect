@@ -10,6 +10,7 @@ const payoutRoutes = require('./routes/payoutRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const stripeRoutes = require('./routes/stripeRoutes');
 const webhookMiddleware = require('./middlewares/webhookMiddleware');
+const schedulePayouts = require('./utils/scheduler'); // Import the scheduler
 
 dotenv.config();
 
@@ -43,11 +44,15 @@ app.use(
   webhookMiddleware,
   (req, res) => {
     const event = req.stripeEvent;
-    // Handle the event type (e.g., payment_intent.succeeded)
     console.log(event.type);
     res.sendStatus(200);
   }
 );
+
+// Start the scheduler if enabled
+if (process.env.ENABLE_SCHEDULER === 'true') {
+  schedulePayouts();
+}
 
 // Server listen
 const PORT = process.env.PORT || 5000;

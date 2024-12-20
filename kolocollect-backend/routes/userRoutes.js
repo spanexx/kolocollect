@@ -26,4 +26,8 @@ router.post('/:userId/activity', userController.logUserActivity);
 // Delete user route
 router.delete('/:userId', userController.deleteUser);
 
+
+router.get('/user/payouts/:userId', userController.getUserPayouts);
+
+
 module.exports = router;

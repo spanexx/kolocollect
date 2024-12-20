@@ -37,7 +37,7 @@ const seedDatabase = async () => {
         status: () => ({
           json: (data) => {
             if (data.user) {
-              users.push(data.user);
+              users.push({ ...data.user, _id: data.user._id || data.user.id });
             }
           },
         }),
@@ -52,7 +52,7 @@ const seedDatabase = async () => {
       name: 'Tech Savers Group',
       description: 'A community for tech enthusiasts to save together.',
       maxMembers: 10,
-      contributionFrequency: 'Weekly',
+      contributionFrequency: 'Daily',
       backupFundPercentage: 10,
       adminId: users[0]._id, // Assign John Doe as admin
       settings: {
@@ -60,16 +60,20 @@ const seedDatabase = async () => {
         minContribution: 100,
         penalty: 20,
         numMissContribution: 3,
-        firstCycleMin: 3,
+        firstCycleMin: 5,
       },
     };
 
     let createdCommunity = null;
     const req = { body: communityPayload };
     const res = {
-      status: () => ({
+      status: (code) => ({
         json: (data) => {
-          createdCommunity = data.community; // Capture the created community
+          if (data.community){
+            createdCommunity = data.community; // Capture the created community
+          }else{
+        console.error('Community creation failed:', data);
+          }
         },
       }),
     };

@@ -33,21 +33,72 @@ exports.getContributionById = async (req, res) => {
 
 // Create a new contribution
 exports.createContribution = async (req, res) => {
+  console.log('Incoming Contribution Data:', req.body);
+
   try {
     const { userId, communityId, amount, contributionDate, cycleNumber, midCycleId } = req.body;
 
+    // Validate required fields
     if (!userId || !communityId || !amount || cycleNumber === undefined || !midCycleId) {
+      console.error('Missing required fields:', req.body);
       return createErrorResponse(res, 400, 'Missing required fields.');
     }
 
+    // Find the wallet and validate balance
     const wallet = await Wallet.findOne({ userId });
     if (!wallet || wallet.availableBalance < amount) {
+      console.error('Insufficient wallet balance for user:', userId);
       return createErrorResponse(res, 400, 'Insufficient wallet balance.');
     }
 
+    console.log('Wallet Balance Before Deduction:', wallet.availableBalance);
+
+    // Deduct amount from wallet balance
     wallet.availableBalance -= amount;
     await wallet.save();
+    console.log('Wallet Balance After Deduction:', wallet.availableBalance);
 
+    // Find the community and validate its existence
+    const community = await Community.findById(communityId);
+    if (!community) {
+      console.error('Community not found:', communityId);
+      return createErrorResponse(res, 404, 'Community not found.');
+    }
+
+    console.log('Community Found:', community.name);
+
+    // Validate cycle number and mid-cycle ID within the community
+    const validCycle = community.cycles.find((cycle) => cycle.cycleNumber === cycleNumber);
+    if (!validCycle) {
+      console.error('Invalid cycle number:', cycleNumber);
+      return createErrorResponse(res, 400, 'Invalid cycle number.');
+    }
+
+    const validMidCycle = community.midCycle.find((mc) => mc._id.toString() === midCycleId);
+    if (!validMidCycle) {
+      console.error('Invalid mid-cycle ID:', midCycleId);
+      return createErrorResponse(res, 400, 'Invalid mid-cycle ID.');
+    }
+
+    // Validate user membership in the community
+    const member = community.members.find((m) => m.userId.toString() === userId);
+    if (!member) {
+      console.error('User is not a member of the community:', userId);
+      return createErrorResponse(res, 404, 'Member not found in the community.');
+    }
+    if (member.status === 'waiting') {
+      console.error('Member is in "waiting" status and cannot contribute:', userId);
+      return createErrorResponse(res, 403, 'Members with status "waiting" cannot contribute.');
+    }
+
+    // Calculate penalty if applicable
+    let penalty = 0;
+    if (member.missedContributions.length > 0) {
+      penalty = member.missedContributions.length * community.settings.penalty;
+      console.log(`Penalty calculated for user ${userId}: €${penalty}`);
+    }
+
+    // Create and save the contribution
     const newContribution = new Contribution({
       userId,
       communityId,
@@ -58,17 +109,55 @@ exports.createContribution = async (req, res) => {
       status: 'completed',
     });
     await newContribution.save();
+    console.log('Contribution saved:', newContribution);
 
-    // Use utility function to record contribution
-    await recordContribution(communityId, userId, [{ recipientId: midCycleId, amount }]);
+    // Update user contributions
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error('User not found:', userId);
+      return createErrorResponse(res, 404, 'User not found.');
+    }
 
-    res.status(201).json({ message: 'Contribution created successfully.', contribution: newContribution });
+    const userContribution = user.contributions.find(
+      (contribution) => contribution.communityId.toString() === communityId
+    );
+
+    if (userContribution) {
+      userContribution.totalContributed += amount;
+      userContribution.positionInCycle = member.position;
+      userContribution.penalty = member.penalty;
+    } else {
+      user.contributions.push({
+        communityId,
+        midCycleId,
+        totalContributed: amount,
+        positionInCycle: member.position,
+        penalty: member.penalty,
+      });
+    }
+
+    await user.save();
+    console.log('User contributions updated:', userId);
+
+    // Record contribution in the community
+    const recordResult = await community.recordContribution(userId, [{ recipientId: midCycleId, amount }]);
+    console.log('Contribution recorded in community:', recordResult.message);
+
+    // Update mid-cycle status
+    const isMidCycleReady = await community.updateMidCycleStatus();
+    console.log('Mid-cycle status updated. Is ready:', isMidCycleReady);
+
+    // Send success response
+    res.status(201).json({
+      message: 'Contribution created successfully.',
+      contribution: newContribution,
+      isMidCycleReady,
+    });
   } catch (err) {
     console.error('Error creating contribution:', err);
     createErrorResponse(res, 500, 'Server error while creating contribution.');
   }
 };
-
 
 // Update a contribution
 exports.updateContribution = async (req, res) => {

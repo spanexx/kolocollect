@@ -5,6 +5,29 @@ const Wallet = require('../models/Wallet');
 const createErrorResponse = (res, status, message) => res.status(status).json({ error: { message } });
 
 
+// Get all communities
+exports.getAllCommunities = async (req, res) => {
+  try {
+    // Fetch all communities from the database
+    const communities = await Community.find();
+
+    // Check if communities exist
+    if (!communities || communities.length === 0) {
+      return res.status(404).json({ message: 'No communities found.' });
+    }
+
+    // Respond with the list of communities
+    res.status(200).json({
+      message: 'Communities fetched successfully.',
+      communities,
+    });
+  } catch (err) {
+    console.error('Error fetching communities:', err);
+    res.status(500).json({ message: 'Error fetching communities.', error: err.message });
+  }
+};
+
+
 
 // Create a new community
 exports.createCommunity = async (req, res) => {
@@ -35,16 +58,13 @@ exports.createCommunity = async (req, res) => {
       ],
     });
 
-    // Ensure firstCycleMin is synced during creation
     await newCommunity.syncFirstCycleMin(newCommunity.settings.firstCycleMin || 5);
-
     await newCommunity.save();
 
-    // Link community to the admin's user profile
+    // Notify the admin
     const adminUser = await User.findById(adminId);
     if (adminUser) {
-      adminUser.communities.push(newCommunity._id);
-      await adminUser.save();
+      await adminUser.addNotification('info', `Community "${name}" created successfully.`);
     }
 
     res.status(201).json({ message: 'Community created successfully', community: newCommunity });
@@ -55,60 +75,66 @@ exports.createCommunity = async (req, res) => {
 };
 
 
+
 // Join a community
 exports.joinCommunity = async (req, res) => {
   try {
     const { communityId } = req.params;
-    const { userId, contributionAmount } = req.body;
+    const { userId } = req.body;
 
-    // Fetch the community
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    // Check if the community is full
-    if (community.members.length >= community.settings.maxMembers) {
-      return res.status(400).json({ message: 'Community is full' });
-    }
-
-    // Check if the user is already a member
-    const isAlreadyMember = community.members.some(
-      (member) => member.userId && member.userId.toString() === userId
-    );
+    // Verify if the user is already a member
+    const isAlreadyMember = community.members.some(member => member.userId.toString() === userId);
     if (isAlreadyMember) {
       return res.status(400).json({ message: 'User is already a member of the community' });
     }
 
-    // Determine the state of the community
-    const activeCycle = community.cycles.find(c => !c.isComplete);
+    // Check if an active mid-cycle exists
     const activeMidCycle = community.midCycle.find(mc => !mc.isComplete);
-
-    if (!activeCycle) {
-      // If no cycle exists, allow user to join and check firstCycleMin
-      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
-    } else if (activeCycle.cycleNumber === 1 && activeMidCycle) {
-      // If first cycle's mid-cycle is active, allow user to join WITHOUT a position
-      community.members.push({ userId, position: null, status: 'active', penalty: 0 });
+    if (activeMidCycle) {
+      // Add user to the community with "waiting" status if mid-cycle is active
+      community.members.push({
+        userId,
+        position: null,
+        status: 'waiting',
+        penalty: 0,
+      });
     } else {
-      // If mid-cycle is NOT active or it's a new cycle, handle as mid-cycle addition
-      await community.addNewMemberMidCycle(userId, contributionAmount);
+      // Add user as an active member with no position
+      community.members.push({
+        userId,
+        position: null,
+        status: 'active',
+        penalty: 0,
+      });
     }
 
     // Save the updated community
     await community.save();
 
-    // Add the community to the user's list
+    // Update user's profile to include the community
     const user = await User.findById(userId);
-    if (user && !user.communities.includes(communityId)) {
+    if (user) {
+      const message = activeMidCycle
+        ? `You have joined the community "${community.name}". You can start contributing in the next cycle.`
+        : `You have successfully joined the community "${community.name}".`;
+
+      await user.addNotification('info', message);
       user.communities.push(communityId);
       await user.save();
     }
 
     res.status(200).json({ message: 'Successfully joined the community', community });
   } catch (err) {
-    console.error('Error joining community:', err);
-    createErrorResponse(res, 500, 'Error joining community. Please try again.');
+    console.error('Error in joinCommunity:', err);
+    res.status(500).json({ message: 'Error joining community. Please try again.', error: err.message });
   }
 };
+
+
+
 
 
 
@@ -162,6 +188,15 @@ exports.distributePayouts = async (req, res) => {
     // Use the schema's method for payout distribution
     const result = await community.distributePayouts();
 
+     // Notify the next recipient
+     const nextRecipientId = community.midCycle.find(mc => !mc.isComplete)?.nextInLine?.userId;
+     if (nextRecipientId) {
+       const user = await User.findById(nextRecipientId);
+       if (user) {
+         await user.addNotification('payout', `You have received a payout in the community "${community.name}".`);
+       }
+     }
+
     res.status(200).json(result);
   } catch (err) {
     console.error('Error distributing payouts:', err);
@@ -210,14 +245,18 @@ exports.recordContribution = async (req, res) => {
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const result = await community.recordContribution(userId, contributions);
+    await community.recordContribution(userId, contributions);
 
-    res.status(200).json(result);
+    // Update payout information
+    await community.updatePayoutInfo();
+
+    res.status(200).json({ message: 'Contribution recorded and payout updated.' });
   } catch (err) {
     console.error('Error recording contributions:', err);
-    res.status(500).json({ message: 'Error recording contributions', error: err.message });
+    res.status(500).json({ message: 'Error recording contributions.' });
   }
 };
+
 
 
 exports.skipPayoutForDefaulters = async (req, res) => {
@@ -237,6 +276,7 @@ exports.skipPayoutForDefaulters = async (req, res) => {
 };
 
 
+// Reactivate a member
 exports.reactivateMember = async (req, res) => {
   try {
     const { communityId, userId } = req.params;
@@ -247,12 +287,19 @@ exports.reactivateMember = async (req, res) => {
 
     const result = await community.reactivateMember(userId, contributionAmount);
 
+    // Notify the reactivated member
+    const user = await User.findById(userId);
+    if (user) {
+      await user.addNotification('info', `Your membership has been reactivated in the community "${community.name}".`);
+    }
+
     res.status(200).json(result);
   } catch (err) {
     console.error('Error reactivating member:', err);
     res.status(500).json({ message: 'Error reactivating member', error: err.message });
   }
 };
+
 
 exports.updateSettings = async (req, res) => {
   try {
@@ -376,6 +423,25 @@ exports.getContributionsByMidCycle = async (req, res) => {
     createErrorResponse(res, 500, 'Failed to fetch contributions. Please try again.');
   }
 };
+
+
+exports.getPayoutInfo = async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const community = await Community.findById(communityId);
+
+    if (!community) return res.status(404).json({ message: 'Community not found.' });
+
+    res.status(200).json({
+      nextPayout: community.nextPayout,
+      payoutDetails: community.payoutDetails,
+    });
+  } catch (err) {
+    console.error('Error fetching payout info:', err);
+    res.status(500).json({ message: 'Error fetching payout info.' });
+  }
+};
+
 
 
 

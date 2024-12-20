@@ -5,6 +5,8 @@ const router = express.Router();
 // Wallet operations
 router.get('/:userId/balance', walletController.getWalletBalance); // Fetch wallet balance
 router.get('/:userId', walletController.getWallet); // Fetch full wallet details
+router.post('/create', walletController.createWallet);
+
 
 router.post('/add-funds', walletController.addFunds);
 router.post('/withdraw-funds', walletController.withdrawFunds);

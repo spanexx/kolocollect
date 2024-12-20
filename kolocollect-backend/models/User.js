@@ -72,6 +72,13 @@ const userSchema = new mongoose.Schema({
       date: { type: Date, default: Date.now },
     },
   ],
+  payouts: [
+    {
+      communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
+      amount: { type: Number },
+      date: { type: Date },
+    },
+  ],
 });
 
 // Password hashing before saving
@@ -182,29 +189,53 @@ userSchema.methods.applyPenalty = async function (communityId, penaltyAmount, cy
 // Add a notification to the user
 userSchema.methods.addNotification = async function (type, message, communityId = null) {
   try {
-    this.notifications.push({
-      type, // Type of notification (e.g., info, penalty, payout, etc.)
-      message, // Message to display to the user
-      communityId, // Optional: Link to a specific community
-      date: new Date(), // Timestamp
-    });
+    // Prevent duplicate notifications of the same type and message
+    const duplicateNotification = this.notifications.find(
+      (n) => n.type === type && n.message === message && String(n.communityId) === String(communityId)
+    );
 
-    // Save the user with the new notification
-    await this.save();
+    if (!duplicateNotification) {
+      this.notifications.push({
+        type,
+        message,
+        communityId,
+        date: new Date(),
+      });
 
-    // Log the action in the user's activity log
-    this.activityLog.push({
-      action: 'notification',
-      details: `New notification added: ${message}`,
-      date: new Date(),
-    });
+      // Log the action in the user's activity log
+      this.activityLog.push({
+        action: 'notification',
+        details: `New notification: ${message}`,
+      });
 
-    await this.save();
-    return { message: 'Notification added successfully.' };
+      await this.save();
+    }
   } catch (err) {
     console.error('Error adding notification:', err);
     throw new Error('Failed to add notification.');
   }
+};
+
+
+userSchema.methods.cleanUpLogs = async function (days = 30) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  // Filter logs and notifications older than 'days'
+  this.notifications = this.notifications.filter((n) => n.date > cutoffDate);
+  this.activityLog = this.activityLog.filter((log) => log.date > cutoffDate);
+
+  await this.save();
+};
+
+
+userSchema.methods.getContributionSummary = function () {
+  return this.contributions.map((c) => ({
+    communityId: c.communityId,
+    totalContributed: c.totalContributed,
+    missedContributions: c.missedContributions.length,
+    penalty: c.penalty,
+  }));
 };
 
 
@@ -217,5 +248,54 @@ userSchema.virtual('totalPenalties').get(function () {
 userSchema.virtual('totalCommunities').get(function () {
   return this.communities.length;
 });
+
+
+userSchema.virtual('totalContributions').get(function () {
+  return this.contributions.reduce((sum, c) => sum + c.totalContributed, 0);
+});
+
+// update payouts for a user
+userSchema.methods.updateUserPayouts = async function (community) {
+  try {
+    const payoutDetails = community.payoutDetails;
+    const existingPayout = this.payouts.find((p) =>
+      p.communityId.equals(community._id)
+    );
+
+    if (payoutDetails) {
+      if (existingPayout) {
+        // Update existing payout
+        existingPayout.amount = payoutDetails.payoutAmount;
+        existingPayout.date = community.nextPayout;
+      } else {
+        // Add new payout
+        this.payouts.push({
+          communityId: community._id,
+          amount: payoutDetails.payoutAmount,
+          date: community.nextPayout,
+        });
+      }
+
+      await this.save();
+    }
+  } catch (err) {
+    console.error('Error updating user payouts:', err);
+    throw err;
+  }
+};
+
+userSchema.virtual('upcomingPayouts').get(function () {
+  return this.contributions.map(contribution => {
+    if (contribution.payoutDate && new Date(contribution.payoutDate) > new Date()) {
+      return {
+        communityId: contribution.communityId,
+        payoutDate: contribution.payoutDate,
+        expectedAmount: contribution.expectedAmount || 0,
+      };
+    }
+    return null;
+  }).filter(payout => payout);
+});
+
 
 module.exports = mongoose.model('User', userSchema);
