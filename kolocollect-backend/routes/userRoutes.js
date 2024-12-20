@@ -3,31 +3,36 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const walletController = require('../controllers/walletController');
 
-// User routes
+// User Management
 router.post('/register', userController.registerUser);
 router.post('/login', userController.loginUser);
-// router.post('/wallet-update', walletController.updateWalletBalance); // Updated to use wallet controller
 router.get('/profile/:id', userController.getUserProfile);
 router.put('/profile/:id', userController.updateUserProfile);
+router.delete('/:userId', userController.deleteUser);
 
-// User community management
+// Community Management
 router.post('/:userId/community', userController.addCommunityToUser);
 router.delete('/:userId/community/:communityId', userController.removeCommunityFromUser);
 
-// Apply penalty to a user
+// Notifications
+router.put('/:userId/notifications/read', userController.markAllNotificationsAsRead);
+router.get('/:userId/notifications', userController.getUserNotifications); // New Route
+
+// Contributions
+router.post('/contributions/update', userController.updateUserContributions);
+router.get('/:userId/contributions', userController.getContributionsByUser); // New Route
+
+// Payouts and Next In Line
+router.get('/user/payouts/:userId', userController.getUserPayouts);
+router.get('/user/nextinline/:userId', userController.checkNextInLineStatus);
+
+// Penalties
 router.post('/:userId/penalty', userController.applyPenaltyToUser);
 
-// Notifications management
-router.put('/:userId/notifications/read', userController.markAllNotificationsAsRead);
+// Wallet Management
+router.get('/:userId/wallet', walletController.getWalletBalance); // New Route
 
-// Log user activity
+// User Activity
 router.post('/:userId/activity', userController.logUserActivity);
-
-// Delete user route
-router.delete('/:userId', userController.deleteUser);
-
-
-router.get('/user/payouts/:userId', userController.getUserPayouts);
-
 
 module.exports = router;

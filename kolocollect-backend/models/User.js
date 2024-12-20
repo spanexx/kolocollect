@@ -81,6 +81,38 @@ const userSchema = new mongoose.Schema({
   ],
 });
 
+// Enable virtuals in toJSON and toObject output
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+
+
+// Virtual field to check if the user is next in line for a payout
+userSchema.virtual('nextInLineDetails').get(async function () {
+  const Community = mongoose.model('Community');
+  const userId = this._id;
+
+  // Fetch all communities where the user is a member
+  const communities = await Community.find({ members: { $elemMatch: { userId } } });
+
+  // Loop through the communities to check for next-in-line status
+  for (const community of communities) {
+    const activeMidCycle = community.midCycle.find((mc) => mc.isReady && !mc.isComplete && mc.nextInLine?.userId.equals(userId));
+    if (activeMidCycle) {
+      return {
+        communityId: community._id,
+        communityName: community.name,
+        midCycleId: activeMidCycle._id,
+        cycleNumber: activeMidCycle.cycleNumber,
+        payoutAmount: activeMidCycle.payoutAmount,
+        missedContributions: activeMidCycle.missedContributions.filter((id) => id.equals(userId)),
+        payoutDate: activeMidCycle.payoutDate,
+      };
+    }
+  }
+
+  return null; // User is not next in line in any community
+});
+
 // Password hashing before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

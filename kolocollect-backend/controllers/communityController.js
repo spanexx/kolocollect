@@ -64,7 +64,18 @@ exports.createCommunity = async (req, res) => {
     // Notify the admin
     const adminUser = await User.findById(adminId);
     if (adminUser) {
-      await adminUser.addNotification('info', `Community "${name}" created successfully.`);
+      if (adminUser.role !== 'admin') {
+        adminUser.role = 'admin'; // Update role to admin
+    }
+      adminUser.communities.push(newCommunity._id); // Add the community ID to the user's communities array
+      await adminUser.addNotification(
+        'info', 
+        `Community "${name}" created successfully.`,
+        newCommunity._id 
+
+      );
+      await adminUser.save();
+
     }
 
     res.status(201).json({ message: 'Community created successfully', community: newCommunity });
@@ -121,7 +132,7 @@ exports.joinCommunity = async (req, res) => {
         ? `You have joined the community "${community.name}". You can start contributing in the next cycle.`
         : `You have successfully joined the community "${community.name}".`;
 
-      await user.addNotification('info', message);
+      await user.addNotification('info', message, communityId);
       user.communities.push(communityId);
       await user.save();
     }

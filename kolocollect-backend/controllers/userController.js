@@ -81,17 +81,11 @@ exports.getUserProfile = async (req, res) => {
 
     const wallet = await Wallet.findOne({ userId: user._id });
 
+    const nextInLineDetails = await user.nextInLineDetails;
+
+
     res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        totalCommunities: user.totalCommunities,
-        totalPenalties: user.totalPenalties,
-        contributions: user.contributions,
-        votes: user.votes,
-        notifications: user.notifications,
-      },
+      user, 
       wallet: {
         availableBalance: wallet.availableBalance,
         totalBalance: wallet.totalBalance,
@@ -279,6 +273,85 @@ exports.getUserPayouts = async (req, res) => {
     res.status(500).json({ message: 'Error fetching user payouts.' });
   }
 };
+
+exports.checkNextInLineStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    const nextInLineDetails = await user.nextInLineDetails;
+
+    if (nextInLineDetails) {
+      res.status(200).json({
+        message: 'User is next in line for a payout.',
+        nextInLineDetails,
+      });
+    } else {
+      res.status(200).json({
+        message: 'User is not next in line for any payouts.',
+      });
+    }
+  } catch (err) {
+    console.error('Error checking next in line status:', err);
+    createErrorResponse(res, 500, 'Failed to check next in line status.');
+  }
+};
+
+
+// Get Notifications by User
+exports.getUserNotifications = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find user by ID and fetch notifications
+    const user = await User.findById(userId).select('notifications');
+
+    if (!user) {
+      return createErrorResponse(res, 404, 'User not found.');
+    }
+
+    // Return notifications
+    res.status(200).json({
+      message: 'User notifications retrieved successfully.',
+      notifications: user.notifications,
+    });
+  } catch (err) {
+    console.error('Error fetching notifications for user:', err);
+    createErrorResponse(res, 500, 'Failed to fetch notifications for user.');
+  }
+};
+
+
+
+// Get Contributions by User
+exports.getContributionsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find user by ID and populate contributions
+    const user = await User.findById(userId).populate({
+      path: 'contributions.communityId',
+      select: 'name description',
+    });
+
+    if (!user) {
+      return createErrorResponse(res, 404, 'User not found.');
+    }
+
+    // Return contributions
+    res.status(200).json({
+      message: 'User contributions retrieved successfully.',
+      contributions: user.contributions,
+    });
+  } catch (err) {
+    console.error('Error fetching contributions by user:', err);
+    createErrorResponse(res, 500, 'Failed to fetch contributions for user.');
+  }
+};
+
+
 
 
 //Reusable Helper for Fetching User with Wallet
