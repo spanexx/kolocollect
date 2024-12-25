@@ -13,19 +13,18 @@ exports.getAllCommunities = async (req, res) => {
 
     // Check if communities exist
     if (!communities || communities.length === 0) {
-      return res.status(404).json({ message: 'No communities found.' });
+      return res.status(404).json([]);
     }
 
-    // Respond with the list of communities
-    res.status(200).json({
-      message: 'Communities fetched successfully.',
-      communities,
-    });
+    // Respond with the list of communities directly (as an array)
+    res.status(200).json(communities);
   } catch (err) {
     console.error('Error fetching communities:', err);
+    
     res.status(500).json({ message: 'Error fetching communities.', error: err.message });
   }
 };
+
 
 
 
@@ -36,6 +35,12 @@ exports.createCommunity = async (req, res) => {
 
     if (!name || !maxMembers || !contributionFrequency || !adminId) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Fetch admin user details
+    const adminUser = await User.findById(adminId);
+    if (!adminUser) {
+      return res.status(404).json({ message: 'Admin user not found' });
     }
 
     const newCommunity = new Community({
@@ -51,6 +56,8 @@ exports.createCommunity = async (req, res) => {
       members: [
         {
           userId: adminId,
+          name: adminUser.name, // Use admin's name
+          email: adminUser.email, // Use admin's email
           position: 1,
           status: 'active',
           penalty: 0,
@@ -61,22 +68,17 @@ exports.createCommunity = async (req, res) => {
     await newCommunity.syncFirstCycleMin(newCommunity.settings.firstCycleMin || 5);
     await newCommunity.save();
 
-    // Notify the admin
-    const adminUser = await User.findById(adminId);
-    if (adminUser) {
-      if (adminUser.role !== 'admin') {
-        adminUser.role = 'admin'; // Update role to admin
+    // Update admin's user details
+    if (adminUser.role !== 'admin') {
+      adminUser.role = 'admin'; // Update role to admin
     }
-      adminUser.communities.push(newCommunity._id); // Add the community ID to the user's communities array
-      await adminUser.addNotification(
-        'info', 
-        `Community "${name}" created successfully.`,
-        newCommunity._id 
-
-      );
-      await adminUser.save();
-
-    }
+    adminUser.communities.push(newCommunity._id); // Add the community ID to the user's communities array
+    await adminUser.addNotification(
+      'info',
+      `Community "${name}" created successfully.`,
+      newCommunity._id
+    );
+    await adminUser.save();
 
     res.status(201).json({ message: 'Community created successfully', community: newCommunity });
   } catch (err) {
@@ -86,50 +88,49 @@ exports.createCommunity = async (req, res) => {
 };
 
 
-
 // Join a community
 exports.joinCommunity = async (req, res) => {
   try {
     const { communityId } = req.params;
-    const { userId } = req.body;
+    const { userId, name, email } = req.body; // Ensure these fields are included in the request
 
+    // Validate request data
+    if (!userId || !name || !email) {
+      return res.status(400).json({ message: 'Missing required fields: userId, name, or email.' });
+    }
+
+    // Find the community
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    // Verify if the user is already a member
-    const isAlreadyMember = community.members.some(member => member.userId.toString() === userId);
+    // Check if the user is already a member
+    const isAlreadyMember = community.members.some((member) => member.userId.toString() === userId);
     if (isAlreadyMember) {
-      return res.status(400).json({ message: 'User is already a member of the community' });
+      return res.status(400).json({ message: 'User is already a member of the community.' });
     }
 
-    // Check if an active mid-cycle exists
-    const activeMidCycle = community.midCycle.find(mc => !mc.isComplete);
-    if (activeMidCycle) {
-      // Add user to the community with "waiting" status if mid-cycle is active
-      community.members.push({
-        userId,
-        position: null,
-        status: 'waiting',
-        penalty: 0,
-      });
-    } else {
-      // Add user as an active member with no position
-      community.members.push({
-        userId,
-        position: null,
-        status: 'active',
-        penalty: 0,
-      });
-    }
+    // Determine user status based on active mid-cycle
+    const activeMidCycle = community.midCycle.find((mc) => !mc.isComplete);
+    const status = activeMidCycle ? 'waiting' : 'active';
+
+    // Add the user to the community
+    community.members.push({
+      userId,
+      name,
+      email,
+      position: null,
+      status,
+      penalty: 0,
+    });
 
     // Save the updated community
     await community.save();
 
-    // Update user's profile to include the community
+    // Update the user's community list
     const user = await User.findById(userId);
     if (user) {
       const message = activeMidCycle
-        ? `You have joined the community "${community.name}". You can start contributing in the next cycle.`
+        ? `You have joined the community "${community.name}". You will participate in the next cycle.`
         : `You have successfully joined the community "${community.name}".`;
 
       await user.addNotification('info', message, communityId);
@@ -140,30 +141,27 @@ exports.joinCommunity = async (req, res) => {
     res.status(200).json({ message: 'Successfully joined the community', community });
   } catch (err) {
     console.error('Error in joinCommunity:', err);
-    res.status(500).json({ message: 'Error joining community. Please try again.', error: err.message });
+    res.status(500).json({ message: 'Error joining community.', error: err.message });
   }
 };
 
 
 
-
-
-
 exports.getCommunityById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { communityId } = req.params;
 
-    if (!id) {
+    if (!communityId) {
       return createErrorResponse(res, 400, 'Community ID is required.');
     }
 
-    const community = await Community.findById(id);
+    const community = await Community.findById(communityId);
 
     if (!community) {
       return createErrorResponse(res, 404, 'Community not found.');
     }
 
-    res.status(200).json({ message: 'Community fetched successfully.', community });
+    res.status(200).json( community );
   } catch (err) {
     console.error('Error fetching community:', err);
     createErrorResponse(res, 500, 'Failed to fetch community. Please try again.');

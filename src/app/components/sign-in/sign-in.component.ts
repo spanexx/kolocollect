@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -10,26 +9,27 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [RouterModule, FormsModule, CommonModule, ReactiveFormsModule],
   templateUrl: './sign-in.component.html',
-  styleUrl: './sign-in.component.css'
+  styleUrls: ['./sign-in.component.css'], // Corrected typo in `styleUrls`
 })
 export class SignInComponent {
-  signInForm: FormGroup;
+  signInForm: FormGroup; // Properly define `FormGroup`
 
   constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) {
     this.signInForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
-  onSubmit(signInForm: any): void {
-    if (signInForm.valid) {
-      console.log('Form submission data:', signInForm.value); // Log form submission data
-      this.authService.login(signInForm.value.email, signInForm.value.password).subscribe(
+  onSubmit(): void {
+    if (this.signInForm.valid) {
+      console.log('Form submission data:', this.signInForm.value);
+      const credentials = this.signInForm.value;
+
+      this.authService.login(credentials).subscribe(
         (response) => {
           console.log('Login successful', response);
-  
-          // Redirect logic
+
           const redirectUrl = localStorage.getItem('redirectUrl');
           if (redirectUrl) {
             localStorage.removeItem('redirectUrl');

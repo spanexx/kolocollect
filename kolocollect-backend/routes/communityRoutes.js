@@ -7,6 +7,9 @@ const User = require('../models/User')
 //Route to get All Communities
 router.get('/', communityController.getAllCommunities);
 
+//get community by Id
+router.get('/:communityId', communityController.getCommunityById)
+
 
 // Route to create a new community
 router.post('/create', communityController.createCommunity);

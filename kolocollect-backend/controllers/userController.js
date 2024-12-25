@@ -154,6 +154,41 @@ exports.logUserActivity = async (req, res) => {
   }
 };
 
+
+
+exports.getUserCommunity = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find the user and populate their communities
+    const user = await User.findById(userId).populate({
+      path: 'communities',
+      select: 'name description members settings',
+    });
+
+    if (!user) {
+      return createErrorResponse(res, 404, 'User not found.');
+    }
+
+    // Prepare community data
+    const communities = user.communities.map((community) => ({
+      id: community._id,
+      name: community.name,
+      description: community.description,
+      memberCount: community.members.length,
+      settings: community.settings,
+    }));
+
+    res.status(200).json(
+      communities
+    );
+  } catch (err) {
+    console.error('Error fetching user communities:', err);
+    createErrorResponse(res, 500, 'Failed to fetch user communities.');
+  }
+};
+
+
 // Update User Profile
 exports.updateUserProfile = async (req, res) => {
   try {

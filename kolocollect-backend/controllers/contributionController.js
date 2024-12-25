@@ -44,6 +44,27 @@ exports.createContribution = async (req, res) => {
       return createErrorResponse(res, 400, 'Missing required fields.');
     }
 
+    // Find the community and validate its existence
+    const community = await Community.findById(communityId);
+    if (!community) {
+      console.error('Community not found:', communityId);
+      return createErrorResponse(res, 404, 'Community not found.');
+    }
+
+    console.log('Community Found:', community.name);
+
+    // Ensure contribution amount is at least the minimum contribution
+    if (amount < community.settings.minContribution) {
+      console.error(
+        `Contribution amount is less than the minimum required: ${amount} < ${community.settings.minContribution}`
+      );
+      return createErrorResponse(
+        res,
+        400,
+        `Contribution amount must be at least €${community.settings.minContribution.toFixed(2)}.`
+      );
+    }
+
     // Find the wallet and validate balance
     const wallet = await Wallet.findOne({ userId });
     if (!wallet || wallet.availableBalance < amount) {
@@ -57,15 +78,6 @@ exports.createContribution = async (req, res) => {
     wallet.availableBalance -= amount;
     await wallet.save();
     console.log('Wallet Balance After Deduction:', wallet.availableBalance);
-
-    // Find the community and validate its existence
-    const community = await Community.findById(communityId);
-    if (!community) {
-      console.error('Community not found:', communityId);
-      return createErrorResponse(res, 404, 'Community not found.');
-    }
-
-    console.log('Community Found:', community.name);
 
     // Validate cycle number and mid-cycle ID within the community
     const validCycle = community.cycles.find((cycle) => cycle.cycleNumber === cycleNumber);
@@ -158,6 +170,7 @@ exports.createContribution = async (req, res) => {
     createErrorResponse(res, 500, 'Server error while creating contribution.');
   }
 };
+
 
 // Update a contribution
 exports.updateContribution = async (req, res) => {

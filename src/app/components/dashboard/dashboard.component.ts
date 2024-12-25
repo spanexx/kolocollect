@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { User } from '../../models/User';
-import { Community } from '../../models/Community';
+import { IActivity, IContribution, IPayout, IUser } from '../../shared/models/User';
+import { ICommunity } from '../../shared/models/Community';
 import { AuthService } from '../../services/auth.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { WalletService } from '../../services/wallet.service';
@@ -31,17 +31,21 @@ import { UserService } from '../../services/user.service';
   ]
 })
 export class DashboardComponent implements OnInit {
-  user: User | null = null;
+  user!: IUser ;
   totalCommunities: number = 0;
   totalContributions: number = 0;
   totalSavings: number = 0;
   upcomingPayout: Date | null = null;
+  upcomingPayouts: IPayout[] = [];
+  totalPenalties: number = 0;
+  totalContributed: number = 0;
   walletBalance: number = 0;
+  userCommunities: ICommunity[] = [];
+  recentActivities: IActivity[] = [];
+  userContributions: IContribution[] = [];
   recentTransactions: { date: string, amount: number, type: string }[] = [];
 
-  recentActivities: string[] = [];
   savingsGoals: { name: string; progress: number }[] = [];
-  userCommunities: Community[] = [];
   showNotifications = false;
   unreadNotificationsCount = 5;
   openCommunityId: string | null = null; // Track which community is open
@@ -65,12 +69,12 @@ export class DashboardComponent implements OnInit {
     const currentUser = this.authService.currentUserValue?.user;
     if (currentUser) {
       this.user = currentUser;
-      this.totalContributions = currentUser.contributions ? currentUser.contributions.length : 0;
-      this.totalSavings = currentUser.totalSavings || 0;
-      this.upcomingPayout = currentUser.upcomingPayout || null;
-      this.recentActivities = currentUser.recentActivities || [];
-      this.savingsGoals = currentUser.savingsGoals || [];
-      this.recentTransactions = currentUser.recentTransactions || [];
+      console.log(this.user)
+      this.loadWalletBalance();
+      this.loadUserCommunities();
+      this.loadUserContributions();
+      this.loadUserPayouts();
+      this.loadActivityLogs();
 
       // Fetch wallet balance
       this.walletService.getWalletBalance(currentUser.id).subscribe(
@@ -88,9 +92,10 @@ export class DashboardComponent implements OnInit {
 
       // Fetch user's communities
       
-      this.userService.getUserCommunities().subscribe(
+      this.userService.getUserCommunities(this.user.id).subscribe(
         (communities) => {
-          this.userCommunities = communities.communities;
+          console.log(communities)
+          this.userCommunities = communities;
           this.totalCommunities = this.userCommunities.length;
           
         },
@@ -107,6 +112,89 @@ export class DashboardComponent implements OnInit {
       console.error('User is not logged in. Redirecting to login.');
       this.router.navigate(['/login']);
     }
+  }
+
+
+  // Load wallet balance
+  loadWalletBalance() {
+    this.walletService.getWalletBalance(this.user.id).subscribe(
+      (response) => {
+        this.walletBalance = response.availableBalance;
+      },
+      (error) => {
+        if (error.status === 404) {
+          console.error('Wallet not found.');
+        } else {
+          console.error('Error fetching wallet balance:', error);
+        }
+      }
+    );
+  }
+
+  // Load user communities
+  loadUserCommunities() {
+    this.userService.getUserCommunities(this.user.id).subscribe(
+      (communities) => {
+        this.userCommunities = communities;
+      },
+      (error) => {
+        console.error('Error fetching user communities:', error);
+      }
+    );
+  }
+
+// Load user contributions
+loadUserContributions() {
+  this.userService.getUserContributions(this.user.id).subscribe(
+    (response) => {
+      // Extract contributions from the API response
+      const contributions = response.contributions;
+      this.totalSavings = contributions[0].totalContributed
+
+      if (Array.isArray(contributions)) {
+        this.userContributions = contributions;
+
+        // Sum up totalContributed directly from contributions
+        this.totalContributions = contributions.reduce(
+          (total: number, c: IContribution) => total + c.totalContributed,
+          0
+        );
+      } else {
+        console.error('Invalid data type for contributions:', response);
+        this.userContributions = [];
+        this.totalContributions = 0;
+      }
+    },
+    (error) => {
+      console.error('Error fetching user contributions:', error);
+      this.userContributions = [];
+      this.totalContributions = 0;
+    }
+  );
+}
+
+  // Load user payouts
+  loadUserPayouts() {
+    this.userService.getUserPayouts(this.user.id).subscribe(
+      (payouts) => {
+        this.upcomingPayouts = payouts;
+      },
+      (error) => {
+        console.error('Error fetching user payouts:', error);
+      }
+    );
+  }
+
+  // Load activity logs
+  loadActivityLogs() {
+    this.userService.getUserNotifications(this.user.id).subscribe(
+      (activities) => {
+        this.recentActivities = activities;
+      },
+      (error) => {
+        console.error('Error fetching user activity logs:', error);
+      }
+    );
   }
 
   // Toggle notifications

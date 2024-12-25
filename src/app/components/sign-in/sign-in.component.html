@@ -1,17 +1,23 @@
 <div class="auth-container">
   <h2 class="auth-title">Sign In</h2>
-  <form [formGroup]="signInForm" (ngSubmit)="onSubmit(signInForm)" class="auth-form">
+  <form [formGroup]="signInForm" (ngSubmit)="onSubmit()" class="auth-form">
     <div class="form-group">
       <label for="email">Email</label>
       <input id="email" type="email" formControlName="email" class="form-control">
+      <div *ngIf="signInForm.get('email')?.invalid && signInForm.get('email')?.touched" class="error-message">
+        Please enter a valid email.
+      </div>
     </div>
 
     <div class="form-group">
       <label for="password">Password</label>
       <input id="password" type="password" formControlName="password" class="form-control">
+      <div *ngIf="signInForm.get('password')?.invalid && signInForm.get('password')?.touched" class="error-message">
+        Password must be at least 6 characters long.
+      </div>
     </div>
 
-    <button type="submit" class="auth-btn">Sign In</button>
+    <button type="submit" class="auth-btn" [disabled]="signInForm.invalid">Sign In</button>
   </form>
 
   <p class="auth-switch">Don't have an account? <a routerLink="/sign-up">Sign Up</a></p>

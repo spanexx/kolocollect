@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommunityService } from '../../services/community.service';
 import { AuthService } from '../../services/auth.service';
-import { Community } from '../../models/Community';
-import { User } from '../../models/User';
+import { ICommunity, IMember } from '../../shared/models/Community';
+import { IUser } from '../../shared/models/User';
 import { ContributeFormComponent } from '../contribute-form/contribute-form.component';
-import { Contribution } from '../../models/Contribute';
+import { IContribution } from '../../shared/models/Contribute';
+import { ContributeService } from 'src/app/services/contribute.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-community-detail',
@@ -16,20 +18,24 @@ import { Contribution } from '../../models/Contribute';
   templateUrl: './community-detail.component.html',
   styleUrls: ['./community-detail.component.css'],
 })
-export class CommunityDetailComponent implements OnInit {
-  community?: Community;
+export class CommunityDetailComponent implements OnInit, OnDestroy {
+  community?: ICommunity;
   communityId!: string;
   membersCount: number = 0;
-  currentUser!: User;
+  currentUser?: IUser;
+  currentUserId?:  string;
   membersVisible: boolean = false; // Toggle visibility for members list
   showContributeModal: boolean = false;
   hasJoined: boolean = false; // Track if user has already joined
+
+  private userSubscription?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private communityService: CommunityService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private contributeService: ContributeService
   ) {}
 
   ngOnInit(): void {
@@ -41,21 +47,36 @@ export class CommunityDetailComponent implements OnInit {
       }
     });
 
-    this.currentUser = this.authService.currentUserValue?.user;
-    if (!this.currentUser) {
-      this.router.navigate(['/sign-in']);
-    }
+    console.log('AuthService currentUserValue:', this.authService.currentUserValue);
+    this.currentUserId = this.authService.currentUserValue?.user?.id || null;
+    console.log('Extracted currentUserId:', this.currentUserId);
+
+    this.userSubscription = this.authService.currentUser.subscribe((user) => {
+      if (!user) {
+        this.router.navigate(['/sign-in']);
+      } else {
+        this.currentUser = user;
+      }
+    });
+
+  }
+
+  ngOnDestroy(): void {
+    this.userSubscription?.unsubscribe(); // Avoid memory leaks
   }
 
   loadCommunityDetails(): void {
     if (!this.communityId) return;
-  
+
     this.communityService.getCommunityById(this.communityId).subscribe(
       (community) => {
         this.community = community;
+        console.log(community, this.currentUser?.id)
+
+
         this.updateMembersCount();
-        this.hasJoined = this.community.membersList?.some(
-          (member) => member.userId === this.currentUser.id
+        this.hasJoined = this.community.members.some(
+          (member) => member.userId ===   this.currentUserId
         );
         localStorage.setItem('community', JSON.stringify(this.community));
       },
@@ -64,17 +85,13 @@ export class CommunityDetailComponent implements OnInit {
         alert('Failed to load community details. Please try again later.');
       }
     );
+
   }
-  
 
   updateMembersCount(): void {
     if (this.community) {
-      this.membersCount = this.community.membersList?.length || 0;
+      this.membersCount = this.community.members.length || 0;
     }
-  }
-
-  goToCommunitySettings(): void {
-    this.router.navigate(['/community', this.communityId, 'settings']);
   }
 
   toggleMembers(): void {
@@ -86,18 +103,13 @@ export class CommunityDetailComponent implements OnInit {
       alert('You are already a member of this community.');
       return;
     }
-  
-    if (!this.currentUser?.id) {
-      alert('User ID is not available. Please log in again.');
+
+    if (!this.currentUser) {
+      alert('User is not logged in. Please log in and try again.');
       return;
     }
-  
-    const joinRequest = {
-      userId: this.currentUser.id, // Ensure currentUser.id is defined
-      communityId: this.communityId,
-    };
-  
-    this.communityService.joinCommunity(joinRequest).subscribe(
+
+    this.communityService.joinCommunity(this.communityId, this.currentUser.id).subscribe(
       () => {
         this.hasJoined = true;
         this.loadCommunityDetails(); // Refresh details after joining
@@ -109,7 +121,7 @@ export class CommunityDetailComponent implements OnInit {
       }
     );
   }
-  
+
   goToContributeForm(): void {
     this.showContributeModal = true;
   }
@@ -119,9 +131,12 @@ export class CommunityDetailComponent implements OnInit {
     this.loadCommunityDetails(); // Reload to reflect changes
   }
 
-  handleContribution(contribution: Contribution): void {
-    this.communityService.addContribution(contribution).subscribe(
-      () => alert('Contribution added successfully!'),
+  handleContribution(contribution: IContribution): void {
+    this.contributeService.createContribution(contribution).subscribe(
+      () => {
+        alert('Contribution added successfully!');
+        this.loadCommunityDetails();
+      },
       (error) => {
         console.error('Error adding contribution:', error);
         alert('Failed to add contribution. Please try again later.');

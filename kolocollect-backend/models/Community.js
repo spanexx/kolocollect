@@ -34,7 +34,7 @@ const CommunitySchema = new mongoose.Schema({
     
 
     cycles: [{
-        cycleNumber: { type: Number, required: true },
+        cycleNumber: { type: Number, requirepuserd: true },
         midCycles: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'MidCycle',
@@ -45,6 +45,8 @@ const CommunitySchema = new mongoose.Schema({
     }],
 
     members: [{
+        name: {type: String, required: true},
+        email: {type: String, required: true},
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         position: { type: Number },
         contributionPaid: { type: Boolean, default: false },

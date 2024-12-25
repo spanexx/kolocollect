@@ -12,6 +12,7 @@ router.delete('/:userId', userController.deleteUser);
 
 // Community Management
 router.post('/:userId/community', userController.addCommunityToUser);
+router.get('/:userId/communities', userController.getUserCommunity);
 router.delete('/:userId/community/:communityId', userController.removeCommunityFromUser);
 
 // Notifications

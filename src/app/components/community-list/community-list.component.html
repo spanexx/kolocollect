@@ -1,19 +1,17 @@
 <!-- community list -->
 
 <div class="community-list-container">
-    <h1>Browse Communities</h1>
-  
-    <div class="community-actions">
-      <button class="cta" routerLink="/create-community">Create a New Community</button>
-    </div>
-  
-    <div class="community-list">
-      <div class="community-card" *ngFor="let community of communities">
-        <h2>{{community.name}}</h2>
-        <p>{{community.description}}</p>
-        <p>Total Members: {{community.members}}</p>
-        <button class="cta" routerLink="/community/{{community._id}}">View Community</button>
-      </div>
+  <h1>Browse Communities</h1>
+
+  <div class="community-actions">
+    <button class="cta" routerLink="/create-community">Create a New Community</button>
+  </div>
+
+  <div class="community-list">
+    <div class="community-card" *ngFor="let community of communities">
+      <h2>{{ community.name }}</h2>
+      <p>Total Members: {{ community.members.length || 0 }}</p>
+      <button class="cta" routerLink="/community/{{ community._id }}">View Community</button>
     </div>
   </div>
-  
+</div>

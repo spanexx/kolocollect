@@ -1,71 +1,94 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { Router } from '@angular/router';
-import { LoginResponse } from './../models/Login';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { IUser } from '@models/User';
+import { ICommunity } from '@models/Community';
+import { Wallet } from '@models/Wallet';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UserService {
-  private apiUrl = `${environment.apiUrl}/api/users`;
+  private apiUrl = `${environment.apiUrl}/users`;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient) {}
 
-  register(user: { name: string; email: string; password: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, user);
+  // Fetch user profile
+  getUserProfile(userId: string): Observable<{
+    user: IUser;
+    wallet: Wallet;
+  }> {
+    return this.http.get<{
+      user: IUser;
+      wallet: Wallet;
+    }>(`${this.apiUrl}/profile/${userId}`);
   }
 
-login(credentials: { email: string; password: string }): Observable<LoginResponse> {
-  const redirectUrl = localStorage.getItem('redirectUrl');
-  return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
-    tap(response => {
-      if (response.token && response.user._id) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('userId', response.user._id); // Use _id here
-        localStorage.setItem('userName', response.user.name);
-        localStorage.setItem('userEmail', response.user.email);
-
-        // Store wallet details in localStorage
-        localStorage.setItem('walletBalance', response.wallet.availableBalance.toString());
-        localStorage.setItem('walletFixed', response.wallet.fixedBalance.toString());
-        localStorage.setItem('walletTotal', response.wallet.totalBalance.toString());
-
-        if (redirectUrl) {
-          localStorage.removeItem('redirectUrl');
-          this.router.navigate([redirectUrl]);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
-      }
-    })
-  );
+// Fetch communities associated with a user
+getUserCommunities(userId: string): Observable<ICommunity[]> {
+  return this.http.get<ICommunity[]>(`${this.apiUrl}/${userId}/communities`);
 }
 
 
-  logout(): void {
-    localStorage.clear();
-    this.router.navigate(['/login']);
+  // Update user profile
+  updateUserProfile(userId: string, updates: Partial<IUser>): Observable<IUser> {
+    return this.http.put<IUser>(`${this.apiUrl}/profile/${userId}`, updates);
   }
 
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+  // Manage communities
+  addCommunityToUser(userId: string, communityId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${userId}/community`, { communityId });
   }
 
-  getProfile(): Observable<any> {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found in storage');
+  removeCommunityFromUser(userId: string, communityId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${userId}/community/${communityId}`);
+  }
+
+  // Notifications
+  getUserNotifications(userId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${userId}/notifications`);
+  }
+
+  markNotificationsAsRead(userId: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${userId}/notifications/read`, {});
+  }
+
+  // Contributions
+  getUserContributions(userId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${userId}/contributions`);
+  }
+
+  updateUserContributions(
+    contributionData: {
+      userId: string;
+      communityId: string;
+      amount: number;
+      cycleId?: string;
+      midCycleId?: string;
+      penalty?: number;
+      missed?: boolean;
     }
-    return this.http.get(`${this.apiUrl}/profile/${userId}`);
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/contributions/update`, contributionData);
   }
 
-  getUserCommunities(): Observable<any> {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found in storage');
-    }
-    return this.http.get(`${this.apiUrl}/${userId}/communities`);
+  // Payouts
+  getUserPayouts(userId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/user/payouts/${userId}`);
+  }
+
+  checkNextInLineStatus(userId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/user/nextinline/${userId}`);
+  }
+
+  // Activity Logs
+  logUserActivity(userId: string, activityDetails: { action: string; details?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${userId}/activity`, activityDetails);
+  }
+
+  // Delete user
+  deleteUser(userId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${userId}`);
   }
 }

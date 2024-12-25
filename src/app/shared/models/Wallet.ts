@@ -24,9 +24,3 @@ export interface Wallet {
 
   totalBalance: number;            // Virtual field summing available + fixed balances
 }
-
-export interface AddFundsResponse {
-  clientSecret: string;
-  walletBalance: number;
-  transactions: Transaction[];
-}

@@ -27,7 +27,7 @@ export class WithdrawFundComponent implements OnInit {
 
   withdrawFunds(): void {
     if (this.userId && this.amount > 0) {
-      this.walletService.withdrawFunds(this.userId, this.amount, this.description).subscribe({
+      this.walletService.withdrawFunds(this.userId, this.amount).subscribe({
         next: (wallet) => {
           console.log('Funds withdrawn successfully', wallet);
           this.router.navigate(['/wallet']); // Redirect to wallet page

@@ -1,16 +1,17 @@
 import { Component, OnInit } from '@angular/core';
-import { Transaction, Wallet, FixedFund } from '../../models/Wallet';
+import { Transaction, Wallet, FixedFund } from '../../shared/models/Wallet';
 import { WalletService } from '../../services/wallet.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-wallet',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './wallet.component.html',
-  styleUrls: ['./wallet.component.css']
+  styleUrls: ['./wallet.component.css'],
 })
 export class WalletComponent implements OnInit {
   userId: string | null = null;
@@ -24,21 +25,21 @@ export class WalletComponent implements OnInit {
   filterType: string = 'all';
   filteredTransactions: Transaction[] = [];
   recentActivities: string[] = [];
-  
-  // Declare fixDuration property here
-  fixDuration: number = 1; // Default duration is 1 day
+  fixDuration: number = 1; // Default duration in days
 
-  // Flags for form visibility
   showFixForm: boolean = false;
   showTransferForm: boolean = false;
 
   constructor(
-    private walletService: WalletService,
-    private route: ActivatedRoute
+    private walletService: WalletService, 
+    private route: ActivatedRoute,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-    this.userId = localStorage.getItem('userId');
+
+    this.userId = this.authService.currentUserValue.user.id;
+    console.log('Extracted currentUserId:', this.userId);
     if (this.userId) {
       this.loadWalletDetails();
       this.loadTransactionHistory();
@@ -50,11 +51,11 @@ export class WalletComponent implements OnInit {
 
   loadWalletDetails(): void {
     if (this.userId) {
-      this.walletService.getWallet(this.userId).subscribe({
-        next: (wallet) => {
+      this.walletService.getWalletDetails(this.userId).subscribe({
+        next: (wallet: Wallet) => {
           this.wallet = wallet;
         },
-        error: (err) => console.error('Error loading wallet details:', err),
+        error: (err: any) => console.error('Error loading wallet details:', err),
       });
     }
   }
@@ -62,78 +63,68 @@ export class WalletComponent implements OnInit {
   loadWalletBalance(): void {
     if (this.userId) {
       this.walletService.getWalletBalance(this.userId).subscribe({
-        next: (response) => {
+        next: (response: { availableBalance: number; fixedBalance: number; totalBalance: number }) => {
+          console.log("Total Balance: " ,response)
           this.walletBalance = response.availableBalance;
         },
-        error: (err) => console.error('Error loading wallet balance:', err),
+        error: (err: any) => console.error('Error loading wallet balance:', err),
       });
     }
   }
 
   loadTransactionHistory(): void {
     if (this.userId) {
-      this.walletService.getTransactionHistory(this.userId, this.filterType).subscribe({
-        next: (transactions) => {
-          console.log(transactions)
+      this.walletService.getTransactionHistory(this.userId).subscribe({
+        next: (transactions: Transaction[]) => {
           this.transactions = transactions;
           this.filteredTransactions = transactions;
         },
-        error: (err) => console.error('Error loading transactions:', err),
+        error: (err: any) => console.error('Error loading transactions:', err),
       });
-      
     }
   }
-  filterTransactions(): void {
-    if (this.userId && this.filterType === 'all') {
-      this.walletService.getTransactionHistory(this.userId, this.filterType).subscribe({
-        next: (transactions) => {
-          this.transactions = transactions;
-          this.filteredTransactions = transactions;
-        },
-        error: (err) => console.error('Error loading transactions:', err),
-      });
-      
-    }else{
-      this.filteredTransactions = this.transactions.filter(
-        transaction => transaction.type === this.filterType
 
-      )
+  filterTransactions(): void {
+    if (this.filterType === 'all') {
+      this.filteredTransactions = this.transactions;
+    } else {
+      this.filteredTransactions = this.transactions.filter(
+        (transaction) => transaction.type === this.filterType
+      );
     }
   }
-  
 
   loadFixedFunds(): void {
     if (this.userId) {
       this.walletService.getFixedFunds(this.userId).subscribe({
-        next: (fixedFunds) => {
+        next: (fixedFunds: FixedFund[]) => {
           this.fixedFunds = fixedFunds;
         },
-        error: (err) => console.error('Error loading fixed funds:', err),
+        error: (err: any) => console.error('Error loading fixed funds:', err),
       });
     }
   }
 
   loadRecentActivities(): void {
     this.recentActivities = [
-      "Added funds: 500 USD",
-      "Withdrawn funds: 200 USD",
-      "Fixed 100 USD for 30 days",
-      "Transferred 50 USD to user123"
+      'Added funds: 500 USD',
+      'Withdrawn funds: 200 USD',
+      'Fixed 100 USD for 30 days',
+      'Transferred 50 USD to user123',
     ];
   }
 
   fixFunds(): void {
     if (this.fixedAmount > 0) {
       this.walletService.fixFunds(this.userId!, this.fixedAmount, this.fixDuration).subscribe({
-        next: (wallet) => {
-          this.wallet = wallet;
+        next: () => {
           this.loadWalletBalance();
           this.loadFixedFunds();
           this.recentActivities.push(`Fixed ${this.fixedAmount} USD for ${this.fixDuration} days`);
           this.fixedAmount = 0;
           this.showFixForm = false;
         },
-        error: (err) => console.error('Error fixing funds:', err),
+        error: (err: any) => console.error('Error fixing funds:', err),
       });
     } else {
       console.error('Amount must be greater than zero');
@@ -144,17 +135,16 @@ export class WalletComponent implements OnInit {
     if (this.transferAmount > 0 && this.recipientId) {
       const description = `Transfer to ${this.recipientId}`;
       this.walletService
-        .transferFunds(this.userId!, this.recipientId, this.transferAmount, description)
+        .transferFunds(this.userId!, this.transferAmount, this.recipientId, description)
         .subscribe({
-          next: (wallet) => {
-            this.wallet = wallet;
+          next: () => {
             this.loadWalletBalance();
             this.recentActivities.push(`Transferred ${this.transferAmount} USD to ${this.recipientId}`);
             this.transferAmount = 0;
             this.recipientId = '';
             this.showTransferForm = false;
           },
-          error: (err) => console.error('Error transferring funds:', err),
+          error: (err: any) => console.error('Error transferring funds:', err),
         });
     } else {
       console.error('Amount and recipient ID are required');

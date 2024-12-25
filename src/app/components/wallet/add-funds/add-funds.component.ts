@@ -87,7 +87,7 @@ export class AddFundsComponent implements OnInit {
     if (this.userId && this.amount > 0 && this.description.trim()) {
       this.loading = true;
       // Pass the captchaResponse to the addFunds service method
-      this.walletService.addFunds(this.userId, this.amount, this.description, this.captchaResponse).subscribe({
+      this.walletService.addFunds(this.userId, this.amount).subscribe({
         next: (response) => {
           const { clientSecret } = response;
           if (clientSecret) {

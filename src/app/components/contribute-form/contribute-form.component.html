@@ -1,37 +1,65 @@
-<!-- Button to open the modal -->
+<!-- Modal Backdrop -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()"></div>
 
 <!-- Modal Structure -->
 <div class="modal" *ngIf="showModal">
   <div class="modal-content">
-    <h1>Contribute to Community</h1>
-    <form (ngSubmit)="submitContribution()">
-      <label for="amount">Contribution Amount</label>
-      <input
-        type="number"
-        id="amount"
-        [(ngModel)]="contributionAmount"
-        name="amount"
-        required
-      />
+    <h2>Contribute to Community</h2>
+    <form (ngSubmit)="submitContribution()" class="form-container">
+      <!-- Contribution Amount -->
+      <div class="form-group">
+        <label for="amount">Contribution Amount (€)</label>
+        <input
+          type="number"
+          id="amount"
+          [(ngModel)]="contributionAmount"
+          name="amount"
+          min="1"
+          class="form-control"
+          placeholder="Enter amount"
+          required
+        />
+      </div>
 
-      <label for="payment-method">Payment Method</label>
-      <select
-        id="payment-method"
-        [(ngModel)]="paymentMethod"
-        name="paymentMethod"
-        required
-      >
-        <option value="" disabled>Select Payment Method</option>
-        <option value="Bank Transfer">Bank Transfer</option>
-        <option value="Mobile Payment">Mobile Payment</option>
-        <!-- Add other options here -->
-      </select>
+      <!-- Payment Method -->
+      <div class="form-group">
+        <label for="payment-method">Payment Method</label>
+        <select
+          id="payment-method"
+          [(ngModel)]="paymentMethod"
+          name="paymentMethod"
+          class="form-control"
+          required
+        >
+          <option value="" disabled selected>Select Payment Method</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Mobile Payment">Mobile Payment</option>
+          <option value="Wallet">Wallet</option>
+          <option value="Card Payment">Card Payment</option>
+        </select>
+      </div>
 
+      <!-- Cycle Selection -->
+      <div class="form-group" *ngIf="community?.cycles?.length">
+        <label for="cycle-number">Cycle</label>
+        <select
+          id="cycle-number"
+          [(ngModel)]="cycleNumber"
+          name="cycleNumber"
+          class="form-control"
+          required
+        >
+          <option *ngFor="let cycle of community.cycles" [value]="cycle.cycleNumber">
+            Cycle {{ cycle.cycleNumber }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Submit Button -->
       <button type="submit" class="cta">Submit Contribution</button>
     </form>
+
+    <!-- Close Button -->
     <button class="close-btn" (click)="closeModal()">Close</button>
   </div>
 </div>
-
-<!-- Backdrop for Modal -->
-<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()"></div>

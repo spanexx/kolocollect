@@ -1,67 +1,106 @@
 import { Injectable } from '@angular/core';
-import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Community } from '../models/Community';
-import { AuthService } from './auth.service';
-import { Contribution } from '../models/Contribute';
+import { environment } from '../../environments/environment';
+import { ICommunity } from '@models/Community';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CommunityService {
-  private apiUrl = `${environment.apiUrl}/api/communities`;
-  private currentUserId: string | null = null;
+  private apiUrl = `${environment.apiUrl}/communities`;
 
-  constructor(private http: HttpClient, private authService: AuthService) {
-    // Initialize current user ID from AuthService
-    this.currentUserId = this.authService.currentUserValue?.user?._id;
-  }
+  constructor(private http: HttpClient) {}
 
   // Fetch all communities
-  getCommunities(): Observable<Community[]> {
-    return this.http.get<Community[]>(this.apiUrl);
+  getAllCommunities(): Observable<ICommunity[]> {
+    return this.http.get<ICommunity[]>(`${this.apiUrl}`);
   }
 
-  // Fetch a community by ID
-  getCommunityById(id: string): Observable<Community> {
-    if (!id) {
-      console.error('Community ID is required.');
-      return new Observable<Community>();
-    }
-    return this.http.get<Community>(`${this.apiUrl}/${id}`);
-  }
-
-  // Join a community
-  joinCommunity(joinRequest: { userId: string; communityId: string }): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${joinRequest.communityId}/join`, {
-      userId: joinRequest.userId,
-    });
+  getCommunityById(communityId: string): Observable<ICommunity>{
+    return this.http.get<ICommunity>(`${this.apiUrl}/${communityId}`)
   }
 
   // Create a new community
-  createCommunity(communityData: Community): Observable<Community> {
-    return this.http.post<Community>(`${this.apiUrl}/create`, communityData);
+  createCommunity(communityData: Partial<ICommunity>): Observable<ICommunity> {
+    return this.http.post<ICommunity>(`${this.apiUrl}/create`, communityData);
   }
 
-  // Update a community by ID
-  updateCommunity(id: string, communityData: Community): Observable<Community> {
-    return this.http.put<Community>(`${this.apiUrl}/update/${id}`, communityData);
+
+
+  // Join a community
+  joinCommunity(communityId: string, userId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/join/${communityId}`, { userId });
   }
 
-  // Delete a community by ID
-  deleteCommunity(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/delete/${id}`);
+  // Start a new mid-cycle
+  startMidCycle(communityId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/midcycle/start/${communityId}`, {});
   }
 
-  // Search for communities by name
-  searchCommunities(query: string): Observable<Community[]> {
-    return this.http.get<Community[]>(`${this.apiUrl}?search=${query}`);
+  // Finalize a cycle
+  finalizeCycle(communityId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cycle/finalize/${communityId}`, {});
   }
 
-  // Add a contribution to a community
-  addContribution(contribution: Contribution): Observable<Community> {
-    const apiUrl = `${environment.apiUrl}/api/contributions`; // Ensure environment-based URL is used
-    return this.http.post<Community>(apiUrl, contribution);
+  // Update community settings
+  updateSettings(communityId: string, settings: Partial<ICommunity['settings']>): Observable<ICommunity> {
+    return this.http.put<ICommunity>(`${this.apiUrl}/update/${communityId}`, settings);
+  }
+
+  // Delete a community
+  deleteCommunity(communityId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/delete/${communityId}`);
+  }
+
+  // Distribute payouts
+  distributePayouts(communityId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/payouts/distribute/${communityId}`, {});
+  }
+
+  // Record contributions
+  recordContribution(
+    contributionData: {
+      communityId: string;
+      contributorId: string;
+      contributions: { recipientId: string; amount: number }[];
+    }
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/contribution/record`, contributionData);
+  }
+
+  // Skip payouts for defaulters
+  skipPayoutForDefaulters(communityId: string, midCycleId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/payouts/skip/${communityId}/${midCycleId}`, {});
+  }
+
+  // Reactivate a member
+  reactivateMember(communityId: string, userId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/member/reactivate/${communityId}/${userId}`, {});
+  }
+
+  // Calculate total owed by a user in a community
+  calculateTotalOwed(communityId: string, userId: string): Observable<{ totalOwed: number }> {
+    return this.http.get<{ totalOwed: number }>(`${this.apiUrl}/calculate/owed/${communityId}/${userId}`);
+  }
+
+  // Process back payments for a user
+  processBackPayment(communityId: string, userId: string, paymentAmount: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/payment/back/${communityId}/${userId}`, { paymentAmount });
+  }
+
+  // Apply resolved votes
+  applyResolvedVotes(communityId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/votes/apply/${communityId}`, {});
+  }
+
+  // Get mid-cycle contributions
+  getMidCycleContributions(communityId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${communityId}/midcycle-contributions`);
+  }
+
+  // Get payout information
+  getPayoutInfo(communityId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/payout/${communityId}`);
   }
 }

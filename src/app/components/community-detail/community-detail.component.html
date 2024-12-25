@@ -6,11 +6,11 @@
   <div class="community-stats">
     <div class="stat-card">
       <h3>Total Members</h3>
-      <p>{{ community.members }}</p>
+      <p>{{ community.members.length || 0 }}</p>
     </div>
     <div class="stat-card">
       <h3>Total Contributions</h3>
-      <p>{{ community.contributions | currency }}</p>
+      <p>{{ community.totalContribution | currency }}</p>
     </div>
     <div class="stat-card">
       <h3>Next Payout</h3>
@@ -18,15 +18,11 @@
     </div>
     <div class="stat-card">
       <h3>Max Members</h3>
-      <p>{{ community.maxMembers }}</p>
+      <p>{{ community.settings.maxMembers }}</p>
     </div>
     <div class="stat-card">
       <h3>Contribution Frequency</h3>
-      <p>{{ community.contributionFrequency }}</p>
-    </div>
-    <div class="stat-card">
-      <h3>Cycle Lock Enabled</h3>
-      <p>{{ community.cycleLockEnabled ? 'Yes' : 'No' }}</p>
+      <p>{{ community.settings.contributionFrequency }}</p>
     </div>
     <div class="stat-card">
       <h3>Backup Fund</h3>
@@ -40,10 +36,10 @@
     </h2>
     <div *ngIf="membersVisible" class="members-list">
       <ul>
-        <li *ngFor="let member of community.membersList">
-          <strong>{{ member.name }}</strong> <span>{{ member.email }}</span> 
+        <li *ngFor="let member of community.members || []">
+          <strong>{{ member.name}}</strong> <span>{{ member.email || 'N/A' }}</span> 
           <br />
-          Contributions Paid: {{ member.contributionsPaid?.total || 0 | currency }}
+          Contributions Paid: {{ member.contributionPaid ? 'Yes' : 'No' }}
         </li>
       </ul>
     </div>
