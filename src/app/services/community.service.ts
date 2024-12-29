@@ -17,16 +17,14 @@ export class CommunityService {
     return this.http.get<ICommunity[]>(`${this.apiUrl}`);
   }
 
-  getCommunityById(communityId: string): Observable<ICommunity>{
-    return this.http.get<ICommunity>(`${this.apiUrl}/${communityId}`)
+  getCommunityById(communityId: string): Observable<ICommunity> {
+    return this.http.get<ICommunity>(`${this.apiUrl}/${communityId}`);
   }
 
   // Create a new community
   createCommunity(communityData: Partial<ICommunity>): Observable<ICommunity> {
     return this.http.post<ICommunity>(`${this.apiUrl}/create`, communityData);
   }
-
-
 
   // Join a community
   joinCommunity(communityId: string, userId: string): Observable<any> {

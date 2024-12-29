@@ -14,7 +14,7 @@
     </div>
     <div class="stat-card">
       <h3>Next Payout</h3>
-      <p>{{ community.nextPayout | date }}</p>
+      <app-countdown-timer *ngIf="formattedNextPayout" [targetDate]="formattedNextPayout"></app-countdown-timer>
     </div>
     <div class="stat-card">
       <h3>Max Members</h3>
@@ -47,6 +47,15 @@
 
   <button *ngIf="!hasJoined" class="cta" (click)="joinCommunity()">Join Community</button>
   <button *ngIf="hasJoined" class="cta" (click)="goToContributeForm()">Contribute</button>
+  <!-- Add this button inside the container where actions are displayed -->
+<button
+*ngIf="isAdmin && communityEligibleForPayouts"
+class="cta"
+(click)="handleDistributePayouts()"
+>
+Distribute Payouts
+</button>
+
 </div>
 
 <app-contribute-form

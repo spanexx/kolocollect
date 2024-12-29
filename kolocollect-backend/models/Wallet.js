@@ -6,7 +6,7 @@ const Schema = mongoose.Schema;
 const transactionSchema = new Schema(
   {
     amount: { type: Number, required: true },
-    type: { type: String, enum: ['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer'], required: true },
+    enum: ['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer', 'payout'], // Added 'payout'
     description: { type: String },
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
@@ -65,20 +65,24 @@ async function updateUserActivity(userId, activityMessage) {
 
 
 // Method to add a transaction and adjust balances
-walletSchema.methods.addTransaction = async function (amount, type, description, recipient, communityId) {
+walletSchema.methods.addTransaction = async function (amount, type, description, recipient = null, communityId = null) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No transactions allowed.');
   }
 
-  if (type === 'withdrawal' || type === 'transfer' || type === 'penalty') {
+  // Adjust balances based on transaction type
+  if (['withdrawal', 'transfer', 'penalty'].includes(type)) {
     if (this.availableBalance < amount) {
       throw new Error('Insufficient balance for the transaction.');
     }
     this.availableBalance -= amount;
-  } else if (type === 'deposit' || type === 'contribution') {
+  } else if (['deposit', 'contribution', 'payout'].includes(type)) {
     this.availableBalance += amount;
+  } else {
+    throw new Error(`Invalid transaction type: ${type}`);
   }
 
+  // Record the transaction
   this.transactions.push({
     amount,
     type,
@@ -87,12 +91,11 @@ walletSchema.methods.addTransaction = async function (amount, type, description,
     communityId,
   });
 
+  // Recalculate total balance
   this.totalBalance = this.availableBalance + this.fixedBalance;
   await this.save();
 
-  // Update the user's notifications and activity log
-  const activityMessage = `Wallet updated: ${description || type} of €${amount}.`;
-  await updateUserActivity(this.userId, activityMessage);
+  console.log(`Transaction of type "${type}" for €${amount} recorded successfully.`);
 };
 
 // Method to withdraw funds

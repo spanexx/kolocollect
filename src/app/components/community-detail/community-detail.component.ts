@@ -10,11 +10,12 @@ import { ContributeFormComponent } from '../contribute-form/contribute-form.comp
 import { IContribution } from '../../shared/models/Contribute';
 import { ContributeService } from 'src/app/services/contribute.service';
 import { Subscription } from 'rxjs';
+import { CountdownTimerComponent } from '../countdown-timer/countdown-timer.component';
 
 @Component({
   selector: 'app-community-detail',
   standalone: true,
-  imports: [RouterModule, FormsModule, CommonModule, ContributeFormComponent],
+  imports: [RouterModule, FormsModule, CommonModule, ContributeFormComponent, CountdownTimerComponent],
   templateUrl: './community-detail.component.html',
   styleUrls: ['./community-detail.component.css'],
 })
@@ -23,10 +24,13 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
   communityId!: string;
   membersCount: number = 0;
   currentUser?: IUser;
-  currentUserId?:  string;
+  currentUserId?: string;
   membersVisible: boolean = false; // Toggle visibility for members list
   showContributeModal: boolean = false;
   hasJoined: boolean = false; // Track if user has already joined
+  isAdmin: boolean = false;
+  communityEligibleForPayouts: boolean = false;
+
 
   private userSubscription?: Subscription;
 
@@ -55,10 +59,9 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
       if (!user) {
         this.router.navigate(['/sign-in']);
       } else {
-        this.currentUser = user;
+        this.currentUser = user.user;
       }
     });
-
   }
 
   ngOnDestroy(): void {
@@ -66,17 +69,23 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
   }
 
   loadCommunityDetails(): void {
+    const userId = this.authService.getUserId(); // Adjust according to your auth implementation
+
     if (!this.communityId) return;
 
     this.communityService.getCommunityById(this.communityId).subscribe(
       (community) => {
         this.community = community;
-        console.log(community, this.currentUser?.id)
+        this.isAdmin = this.community.admin === this.currentUserId;
 
+        console.log("Admin?", this.isAdmin, "Admin ID: " , community.admin, "User ID: ", this.currentUserId )
+        this.checkEligibilityForPayouts();
+
+        console.log(community, this.currentUser);
 
         this.updateMembersCount();
         this.hasJoined = this.community.members.some(
-          (member) => member.userId ===   this.currentUserId
+          (member) => member.userId === this.currentUserId
         );
         localStorage.setItem('community', JSON.stringify(this.community));
       },
@@ -85,7 +94,10 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
         alert('Failed to load community details. Please try again later.');
       }
     );
+  }
 
+  get formattedNextPayout(): string | null {
+    return this.community?.nextPayout ? new Date(this.community.nextPayout).toISOString() : null;
   }
 
   updateMembersCount(): void {
@@ -142,5 +154,29 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
         alert('Failed to add contribution. Please try again later.');
       }
     );
+  }
+
+
+  checkEligibilityForPayouts(): void {
+    console.log(this.community?.midCycle)
+    if (
+      this.community &&
+      this.community.midCycle &&
+      this.community.midCycle.some((mc) => mc.isReady && !mc.isComplete)
+    ) {
+      this.communityEligibleForPayouts = true;
+    }
+  }
+
+  handleDistributePayouts(): void {
+    if (!this.community) return;
+
+    this.communityService.distributePayouts(this.communityId).subscribe({
+      next: () => {
+        alert('Payouts distributed successfully!');
+        this.loadCommunityDetails(); // Reload details to reflect changes
+      },
+      error: (err) => console.error('Error distributing payouts', err),
+    });
   }
 }

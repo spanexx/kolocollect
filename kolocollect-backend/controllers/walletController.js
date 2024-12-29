@@ -29,7 +29,7 @@ exports.createWallet = async (req, res) => {
 
 
 // Add Funds
-exports.addFunds = async (req, res) => {
+exports.  addFunds = async (req, res) => {
   try {
     const { userId, amount } = req.body;
 
@@ -195,56 +195,58 @@ exports.getTransactionHistory = async (req, res) => {
 // Fix Funds
 exports.fixFunds = async (req, res) => {
   try {
-    const { userId, amount, duration } = req.body;
+      const { userId, amount, duration } = req.body;
 
-    // Validate input
-    if (!amount || amount <= 0 || !duration) {
-      return createErrorResponse(res, 400, 'Invalid amount or duration.');
-    }
+      if (!amount || amount <= 0 || !duration) {
+          return res.status(400).json({ message: 'Invalid amount or duration.' });
+      }
 
-    // Find wallet
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) return createErrorResponse(res, 404, 'Wallet not found.');
+      const wallet = await Wallet.findOne({ userId });
+      if (!wallet) return res.status(404).json({ message: 'Wallet not found.' });
 
-    // Check for sufficient balance
-    if (wallet.availableBalance < amount) {
-      return createErrorResponse(res, 400, 'Insufficient funds for fixing.');
-    }
+      if (wallet.availableBalance < amount) {
+          return res.status(400).json({ message: 'Insufficient funds for fixing.' });
+      }
 
-    // Deduct funds from available balance and add to fixed balance
-    wallet.availableBalance -= amount;
-    wallet.fixedBalance += amount;
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + duration);
 
-    // Add transaction entry
-    wallet.transactions.push({
-      amount,
-      type: 'fix',
-      description: `Fixed €${amount} for ${duration} days`,
-    });
+      wallet.availableBalance -= amount;
+      wallet.fixedBalance += amount;
 
-    await wallet.save();
-
-    // Update User Notification
-    const user = await User.findById(userId);
-    if (user) {
-      const notificationMessage = `You have fixed €${amount} for ${duration} days.`;
-      await user.addNotification('info', notificationMessage);
-
-      // Add to activity log
-      user.activityLog.push({
-        action: 'Fixed Funds',
-        details: `Fixed €${amount} for ${duration} days.`,
+      wallet.fixedFunds.push({
+          amount,
+          startDate: new Date(),
+          endDate,
+          isMatured: false,
       });
-      await user.save();
-    }
 
-    res.status(200).json({ message: 'Funds fixed successfully.', wallet });
+      wallet.transactions.push({
+          amount,
+          type: 'fix',
+          description: `Fixed €${amount} for ${duration} days`,
+      });
+
+      await wallet.save();
+
+      const user = await User.findById(userId);
+      if (user) {
+          const notificationMessage = `You have fixed €${amount} for ${duration} days.`;
+          await user.addNotification('info', notificationMessage);
+
+          user.activityLog.push({
+              action: 'Fixed Funds',
+              details: `Fixed €${amount} for ${duration} days.`,
+          });
+          await user.save();
+      }
+
+      res.status(200).json({ message: 'Funds fixed successfully.', wallet });
   } catch (err) {
-    console.error('Error fixing funds:', err);
-    createErrorResponse(res, 500, 'Failed to fix funds.');
+      console.error('Error fixing funds:', err);
+      res.status(500).json({ message: 'Failed to fix funds.' });
   }
 };
-
 
 // Get Fixed Funds
 exports.getFixedFunds = async (req, res) => {

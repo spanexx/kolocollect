@@ -52,7 +52,7 @@ const seedDatabase = async () => {
       name: 'Tech Savers Group',
       description: 'A community for tech enthusiasts to save together.',
       maxMembers: 10,
-      contributionFrequency: 'Daily',
+      contributionFrequency: 'Hourly',
       backupFundPercentage: 10,
       adminId: users[0]._id, // Assign John Doe as admin
       settings: {

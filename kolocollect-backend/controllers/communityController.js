@@ -188,30 +188,19 @@ exports.startMidCycle = async (req, res) => {
 
 //distribute payouts
 exports.distributePayouts = async (req, res) => {
-  try {
-    const { communityId } = req.params;
+    try {
+        const { communityId } = req.params;
+        const community = await Community.findById(communityId);
+        if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-
-    // Use the schema's method for payout distribution
-    const result = await community.distributePayouts();
-
-     // Notify the next recipient
-     const nextRecipientId = community.midCycle.find(mc => !mc.isComplete)?.nextInLine?.userId;
-     if (nextRecipientId) {
-       const user = await User.findById(nextRecipientId);
-       if (user) {
-         await user.addNotification('payout', `You have received a payout in the community "${community.name}".`);
-       }
-     }
-
-    res.status(200).json(result);
-  } catch (err) {
-    console.error('Error distributing payouts:', err);
-    res.status(500).json({ message: 'Error distributing payouts', error: err.message });
-  }
+        const result = await community.distributePayouts();
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error distributing payouts:', err);
+        res.status(500).json({ message: 'Error distributing payouts.', error: err.message });
+    }
 };
+
 
 // Finalize a complete cycle
 exports.finalizeCycle = async (req, res) => {
@@ -249,24 +238,18 @@ exports.finalizeCycle = async (req, res) => {
 
 exports.recordContribution = async (req, res) => {
   try {
-    const { communityId, userId, contributions } = req.body;
+      const { communityId, userId, contributions } = req.body;
+      const community = await Community.findById(communityId);
+      if (!community) return res.status(404).json({ message: 'Community not found' });
 
-    const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-
-    await community.recordContribution(userId, contributions);
-
-    // Update payout information
-    await community.updatePayoutInfo();
-
-    res.status(200).json({ message: 'Contribution recorded and payout updated.' });
+      await community.recordContribution(userId, contributions);
+      await community.updatePayoutInfo();
+      res.status(200).json({ message: 'Contribution recorded and payout updated.' });
   } catch (err) {
-    console.error('Error recording contributions:', err);
-    res.status(500).json({ message: 'Error recording contributions.' });
+      console.error('Error recording contributions:', err);
+      res.status(500).json({ message: 'Error recording contributions.' });
   }
 };
-
-
 
 exports.skipPayoutForDefaulters = async (req, res) => {
   try {
