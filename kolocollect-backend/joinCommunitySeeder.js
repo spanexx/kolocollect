@@ -21,7 +21,7 @@ const joinCommunitySeeder = async () => {
         }
 
         // Fetch the community
-        const communityId = '677138127871068210c5efb8'; // Replace with your community ID
+        const communityId = '677b1500cced4029227a5652'; // Replace with your community ID
         const community = await Community.findById(communityId);
         if (!community) {
             console.error('Community not found. Please create the community first.');

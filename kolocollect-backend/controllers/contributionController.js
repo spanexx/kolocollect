@@ -49,89 +49,16 @@ exports.createContribution = async (req, res) => {
     // Convert userId to ObjectId if it's a string
     const userIdObject = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
 
-    // Find the community and validate its existence
-    const community = await Community.findById(communityId);
-    if (!community) {
-      console.error('Community not found:', communityId);
-      return res.status(404).json({ message: 'Community not found.' });
-    }
+    // Call the static method to handle the contribution logic
+    const savedContribution = await Contribution.createContribution(userIdObject, communityId, amount, midCycleId);
 
-    console.log('Community Found:', community.name);
-
-    // Validate the mid-cycle
-    const activeMidCycle = community.midCycle.find(
-      (mc) => mc._id.toString() === midCycleId.toString() && !mc.isComplete
-    );
-
-    if (!activeMidCycle) {
-      console.error(`MidCycle not found or already complete: ${midCycleId}`);
-      return res.status(404).json({ message: 'MidCycle not found in community.' });
-    }
-
-    // Ensure contribution amount is at least the minimum contribution
-    if (amount < community.settings.minContribution) {
-      console.error(
-        `Contribution amount is less than the minimum required: ${amount} < ${community.settings.minContribution}`
-      );
-      return res.status(400).json({
-        message: `Contribution amount must be at least €${community.settings.minContribution.toFixed(2)}.`,
-      });
-    }
-
-    // Find the wallet and validate balance
-    const wallet = await Wallet.findOne({ userId: userIdObject });
-    if (!wallet || wallet.availableBalance < amount) {
-      console.error('Insufficient wallet balance for user:', userIdObject);
-      return res.status(400).json({ message: 'Insufficient wallet balance.' });
-    }
-
-    console.log('Wallet Balance Before Deduction:', wallet.availableBalance);
-
-    // Deduct amount from wallet balance
-    wallet.availableBalance -= amount;
-    await wallet.save();
-    console.log('Wallet Balance After Deduction:', wallet.availableBalance);
-
-    // Validate user membership in the community
-    const member = community.members.find((m) => m.userId.equals(userIdObject));
-    if (!member) {
-      console.error(`User is not a member of the community: ${userIdObject}`);
-      return res.status(404).json({ message: 'Member not found in the community.' });
-    }
-    if (member.status === 'waiting') {
-      console.error('Member is in "waiting" status and cannot contribute:', userIdObject);
-      return res.status(403).json({ message: 'Members with status "waiting" cannot contribute.' });
-    }
-
-    // Record the contribution using Community's record method
-    const recordResult = await community.record({
-      contributorId: userIdObject,
-      recipientId: communityId,
-      amount,
-    });
-    console.log('Contribution recorded in community:', recordResult.message);
-
-    // Create and save the contribution
-    const newContribution = new Contribution({
-      userId: userIdObject,
-      communityId,
-      amount,
-      contributionDate: new Date(),
-      cycleNumber: recordResult.cycleNumber || 1,
-      midCycleId: activeMidCycle._id, // Use the validated mid-cycle ID
-      status: 'completed',
-    });
-    // await newContribution.save();
-    console.log('Contribution saved:', newContribution);
-
-    // Send success response
     res.status(201).json({
       message: 'Contribution created successfully and recorded in community.',
-      contribution: newContribution,
+      contribution: savedContribution,
     });
   } catch (err) {
     console.error('Error creating contribution:', err);
-    res.status(500).json({ message: 'Server error while creating contribution.' });
+    res.status(500).json({ message: 'Server error while creating contribution.', error: err.message });
   }
 };
 

@@ -20,8 +20,8 @@ const seedContributionForOneMember = async () => {
     console.log('Connected to MongoDB.');
 
     // Replace these IDs with the ones you want to use
-    const communityId = '677138127871068210c5efb8'; // Update with actual community ID
-    const midCycleId = '677139a6f919178d5137e71e'; // Update with actual midCycle ID
+    const communityId = '677b1500cced4029227a5652'; // Update with actual community ID
+    const midCycleId = '677b75d7ecb153e5f63ba6e8'; // Update with actual midCycle ID
 
     // Fetch the target community
     const community = await Community.findById(communityId);

@@ -91,57 +91,61 @@ exports.createCommunity = async (req, res) => {
 // Join a community
 exports.joinCommunity = async (req, res) => {
   try {
-    const { communityId } = req.params;
-    const { userId, name, email } = req.body; // Ensure these fields are included in the request
+      const { communityId } = req.params;
+      const { userId, name, email, contributionAmount } = req.body;
 
-    // Validate request data
-    if (!userId || !name || !email) {
-      return res.status(400).json({ message: 'Missing required fields: userId, name, or email.' });
-    }
+      if (!userId || !name || !email) {
+          return res.status(400).json({ message: 'Missing required fields: userId, name, or email.' });
+      }
 
-    // Find the community
-    const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
+      const community = await Community.findById(communityId);
+      if (!community) return res.status(404).json({ message: 'Community not found.' });
 
-    // Check if the user is already a member
-    const isAlreadyMember = community.members.some((member) => member.userId.toString() === userId);
-    if (isAlreadyMember) {
-      return res.status(400).json({ message: 'User is already a member of the community.' });
-    }
+      const isAlreadyMember = community.members.some((member) => member.userId.toString() === userId);
+      if (isAlreadyMember) {
+          return res.status(400).json({ message: 'User is already a member of the community.' });
+      }
 
-    // Determine user status based on active mid-cycle
-    const activeMidCycle = community.midCycle.find((mc) => !mc.isComplete);
-    const status = activeMidCycle ? 'waiting' : 'active';
+      const currentCycleNumber = community.cycles.length ? community.cycles[community.cycles.length - 1].cycleNumber : 0;
 
-    // Add the user to the community
-    community.members.push({
-      userId,
-      name,
-      email,
-      position: null,
-      status,
-      penalty: 0,
-    });
+      if (currentCycleNumber <= 1 ) {
+          const activeMidCycle = community.midCycle.find((mc) => !mc.isComplete);
+          const status = activeMidCycle ? 'waiting' : 'active';
 
-    // Save the updated community
-    await community.save();
+          community.members.push({
+              userId,
+              name,
+              email,
+              position: null,
+              status,
+              penalty: 0,
+          });
+      } else {
+          // if (!contributionAmount || contributionAmount <= 0) {
+          //     return res.status(400).json({ message: 'Contribution amount is required and must be greater than zero.' });
+          // }
 
-    // Update the user's community list
-    const user = await User.findById(userId);
-    if (user) {
-      const message = activeMidCycle
-        ? `You have joined the community "${community.name}". You will participate in the next cycle.`
-        : `You have successfully joined the community "${community.name}".`;
+          await community.addNewMemberMidCycle(userId, name, email, contributionAmount);
+      }
 
-      await user.addNotification('info', message, communityId);
-      user.communities.push(communityId);
-      await user.save();
-    }
+      await community.save();
 
-    res.status(200).json({ message: 'Successfully joined the community', community });
+      const user = await User.findById(userId);
+      if (user) {
+          const message =
+              currentCycleNumber === 1
+                  ? `You have joined the community "${community.name}".`
+                  : `You have joined the community "${community.name}" during a mid-cycle.`;
+
+          await user.addNotification('info', message, communityId);
+          user.communities.push(communityId);
+          await user.save();
+      }
+
+      res.status(200).json({ message: 'Successfully joined the community.', community });
   } catch (err) {
-    console.error('Error in joinCommunity:', err);
-    res.status(500).json({ message: 'Error joining community.', error: err.message });
+      console.error('Error in joinCommunity:', err);
+      res.status(500).json({ message: 'Error joining community.', error: err.message });
   }
 };
 
