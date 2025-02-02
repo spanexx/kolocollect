@@ -3,6 +3,30 @@ const Community = require('../models/Community');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const createErrorResponse = (res, status, message) => res.status(status).json({ error: { message } });
+const mongoose = require('mongoose');
+
+// Function to check if a string is a valid ObjectId
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
+const retryOperation = async (fn, maxRetries = 3) => {
+  let attempts = 0;
+  const retry = async () => {
+      try {
+          return await fn();
+      } catch (err) {
+          if (err.name === 'VersionError' && attempts < maxRetries) {
+              attempts++;
+              console.log(`Retry #${attempts} for version conflict`);
+              await new Promise(resolve => setTimeout(resolve, 100 * attempts));
+              return retry();
+          }
+          throw err;
+      }
+  };
+  return retry();
+};
 
 
 // Get all communities
@@ -66,6 +90,7 @@ exports.createCommunity = async (req, res) => {
     });
 
     await newCommunity.syncFirstCycleMin(newCommunity.settings.firstCycleMin || 5);
+    await newCommunity.updatePayoutInfo()
     await newCommunity.save();
 
     // Update admin's user details
@@ -101,9 +126,16 @@ exports.joinCommunity = async (req, res) => {
       const community = await Community.findById(communityId);
       if (!community) return res.status(404).json({ message: 'Community not found.' });
 
-      const isAlreadyMember = community.members.some((member) => member.userId.toString() === userId);
+      const isAlreadyMember = community.members.some((member) => 
+          member.userId.toString() === userId || member.email === email
+      );
       if (isAlreadyMember) {
           return res.status(400).json({ message: 'User is already a member of the community.' });
+      }
+
+      const isFull = community.members.length >= community.settings.maxMembers;
+      if (isFull) {
+          return res.status(400).json({ message: 'Community is full.' });
       }
 
       const currentCycleNumber = community.cycles.length ? community.cycles[community.cycles.length - 1].cycleNumber : 0;
@@ -121,9 +153,6 @@ exports.joinCommunity = async (req, res) => {
               penalty: 0,
           });
       } else {
-          // if (!contributionAmount || contributionAmount <= 0) {
-          //     return res.status(400).json({ message: 'Contribution amount is required and must be greater than zero.' });
-          // }
 
           await community.addNewMemberMidCycle(userId, name, email, contributionAmount);
       }
@@ -153,22 +182,18 @@ exports.joinCommunity = async (req, res) => {
 
 exports.getCommunityById = async (req, res) => {
   try {
-    const { communityId } = req.params;
-
-    if (!communityId) {
-      return createErrorResponse(res, 400, 'Community ID is required.');
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid community ID' });
     }
-
-    const community = await Community.findById(communityId);
-
+    const community = await Community.findById(id);
     if (!community) {
-      return createErrorResponse(res, 404, 'Community not found.');
+      return res.status(404).json({ message: 'Community not found' });
     }
-
-    res.status(200).json( community );
-  } catch (err) {
-    console.error('Error fetching community:', err);
-    createErrorResponse(res, 500, 'Failed to fetch community. Please try again.');
+    res.json(community);
+  } catch (error) {
+    console.error('Error fetching community:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -484,4 +509,42 @@ exports.deleteCommunity = async (req, res) => {
     console.error('Error deleting community:', err);
     res.status(500).json({ message: 'Error deleting community.', error: err.message });
   }
+};
+
+exports.searchCommunity = async (req, res) => {
+  try {
+    const keyword = req.query.keyword;
+    const communities = await Community.searchCommunity(keyword);
+    res.status(200).json(communities);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.filterCommunity = async (req, res) => {
+    try {
+        const criteria = req.body;
+        const query = {};
+
+        if (criteria.backupFund) {
+            query.backupFund = { $gte: criteria.backupFund };
+        }
+
+        if (criteria.numberOfMembers) {
+            query['members.length'] = { $gte: criteria.numberOfMembers };
+        }
+
+        if (criteria.nextPayout) {
+            query.nextPayout = { $lte: new Date(criteria.nextPayout) };
+        }
+
+        if (criteria.contributionFrequency) {
+            query['settings.contributionFrequency'] = criteria.contributionFrequency;
+        }
+
+        const communities = await Community.find(query);
+        res.status(200).json(communities);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };

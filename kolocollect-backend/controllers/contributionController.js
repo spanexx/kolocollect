@@ -39,6 +39,7 @@ exports.createContribution = async (req, res) => {
 
   try {
     const { userId, communityId, amount, midCycleId } = req.body;
+    console.log('amount passed to createContribution:', amount);
 
     // Validate required fields
     if (!userId || !communityId || !amount || !midCycleId) {
@@ -50,7 +51,7 @@ exports.createContribution = async (req, res) => {
     const userIdObject = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
 
     // Call the static method to handle the contribution logic
-    const savedContribution = await Contribution.createContribution(userIdObject, communityId, amount, midCycleId);
+    const savedContribution = await Contribution.createContributionWithInstallment(userIdObject, communityId, amount, midCycleId);
 
     res.status(201).json({
       message: 'Contribution created successfully and recorded in community.',

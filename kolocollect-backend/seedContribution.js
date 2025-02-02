@@ -7,7 +7,7 @@ const ContributionController = require('./controllers/contributionController');
 // Load environment variables
 dotenv.config();
 
-const seedContributionForOneMember = async () => {
+const seedContributionsForAllEligibleUsers = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI, {
@@ -20,8 +20,8 @@ const seedContributionForOneMember = async () => {
     console.log('Connected to MongoDB.');
 
     // Replace these IDs with the ones you want to use
-    const communityId = '677b1500cced4029227a5652'; // Update with actual community ID
-    const midCycleId = '677b75d7ecb153e5f63ba6e8'; // Update with actual midCycle ID
+    const communityId = '679cd02559277ed6ddd9d5c4'; // Update with actual community ID
+    const midCycleId = '679cd69a59277ed6ddd9d660'; // Update with actual midCycle ID
 
     // Fetch the target community
     const community = await Community.findById(communityId);
@@ -59,47 +59,50 @@ const seedContributionForOneMember = async () => {
       process.exit(0);
     }
 
-    // Select the first eligible member
-    const memberToContribute = eligibleMembers[0];
-    console.log(`Selected member for contribution: User ID ${memberToContribute.userId}`);
+    console.log(`Eligible members: ${eligibleMembers.map((m) => m.userId).join(', ')}`);
 
-    // Find the member's wallet
-    const wallet = await Wallet.findOne({ userId: memberToContribute.userId });
+    // Process contributions for all eligible members
+    for (const member of eligibleMembers) {
+      console.log(`Processing contribution for User ID: ${member.userId}`);
 
-    if (!wallet || wallet.availableBalance < community.settings.minContribution) {
-      console.error(`User ${memberToContribute.userId} has insufficient funds or wallet not found.`);
-      process.exit(0);
+      // Find the member's wallet
+      const wallet = await Wallet.findOne({ userId: member.userId });
+
+      if (!wallet || wallet.availableBalance < community.settings.minContribution) {
+        console.error(`User ${member.userId} has insufficient funds or wallet not found.`);
+        continue; // Skip this member and move to the next
+      }
+
+      console.log(`User Wallet Balance: €${wallet.availableBalance}`);
+
+      // Prepare request and response mocks for ContributionController
+      const req = {
+        body: {
+          userId: member.userId,
+          communityId,
+          amount: community.settings.minContribution, // Minimum contribution
+          contributionDate: new Date(),
+          cycleNumber: activeMidCycle.cycleNumber,
+          midCycleId: activeMidCycle._id,
+        },
+      };
+
+      const res = {
+        status: (code) => ({
+          json: (data) => console.log(`Contribution Response for User ${member.userId}: ${data.message}`),
+        }),
+      };
+
+      try {
+        // Call the createContribution method
+        await ContributionController.createContribution(req, res);
+        console.log(`Contribution successfully created for User ID: ${member.userId}`);
+      } catch (err) {
+        console.error(`Failed to create contribution for user ${member.userId}:`, err.message);
+      }
     }
 
-    console.log(`User Wallet Balance: €${wallet.availableBalance}`);
-    console.log('Community MidCycle IDs:', community.midCycle.map((mc) => mc._id.toString()));
-
-    // Prepare request and response mocks for ContributionController
-    const req = {
-      body: {
-        userId: memberToContribute.userId,
-        communityId,
-        amount: community.settings.minContribution, // Minimum contribution
-        contributionDate: new Date(),
-        cycleNumber: activeMidCycle.cycleNumber,
-        midCycleId: activeMidCycle._id,
-      },
-    };
-
-    const res = {
-      status: (code) => ({
-        json: (data) => console.log(`Contribution Response: ${data.message}`),
-      }),
-    };
-
-    try {
-      // Call the createContribution method
-      await ContributionController.createContribution(req, res);
-      console.log('Contribution successfully created.');
-    } catch (err) {
-      console.error(`Failed to create contribution for user ${memberToContribute.userId}:`, err.message);
-    }
-
+    console.log('Seeding process completed.');
     process.exit();
   } catch (err) {
     console.error('Error during contribution seeding:', err.message);
@@ -107,4 +110,4 @@ const seedContributionForOneMember = async () => {
   }
 };
 
-seedContributionForOneMember();
+seedContributionsForAllEligibleUsers();

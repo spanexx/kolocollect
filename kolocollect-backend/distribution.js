@@ -2,6 +2,7 @@
 
 const mongoose = require('mongoose');
 const Community = require('./models/Community'); // Ensure the Community model is correctly imported
+const communityController = require('./controllers/communityController'); // Import communityController
 require('dotenv').config();
 
 const distributePayoutsSeeder = async () => {
@@ -13,25 +14,36 @@ const distributePayoutsSeeder = async () => {
     });
     console.log('Connected to MongoDB');
 
-    // Fetch the community with an active mid-cycle that is ready
-    const community = await Community.findOne({
+    // Fetch all communities with an active mid-cycle that is ready for distribution
+    const communities = await Community.find({
       "midCycle.isReady": true,
       "midCycle.isComplete": false,
     });
 
-    if (!community) {
-      console.error('No community found with a ready mid-cycle.');
+    if (!communities.length) {
+      console.error('No communities found with ready mid-cycles.');
       process.exit(1);
     }
 
-    console.log(`Found Community: ${community.name}`);
+    console.log(`Found ${communities.length} community/communities ready for payout distribution.`);
 
-    // Attempt to distribute payouts
-    try {
-      const result = await community.distributePayouts();
-      console.log('Payout Distribution Result:', result.message);
-    } catch (err) {
-      console.error('Error during payout distribution:', err.message);
+    for (const community of communities) {
+      console.log(`Processing payouts for Community: ${community.name}`);
+      try {
+        const req = {
+          params: {
+            communityId: community._id
+          }
+        };
+        const res = {
+          status: (code) => ({
+            json: (data) => console.log(`Payout Distribution for ${community.name}: ${data.message}`)
+          })
+        };
+        await communityController.distributePayouts(req, res); // Use communityController.distributePayouts
+      } catch (err) {
+        console.error(`Error distributing payouts for Community: ${community.name}`, err.message);
+      }
     }
 
     process.exit();

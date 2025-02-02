@@ -6,14 +6,20 @@ const Schema = mongoose.Schema;
 const transactionSchema = new Schema(
   {
     amount: { type: Number, required: true },
-    enum: ['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer', 'payout'], // Added 'payout'
+    type: { 
+      type: String, 
+      enum: ['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer', 'payout', 'fixed'], 
+      required: true 
+    },
     description: { type: String },
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
+    sUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     date: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
+
 
 
 // Fixed Funds Schema to track funds that are locked for a specific duration
@@ -65,131 +71,127 @@ async function updateUserActivity(userId, activityMessage) {
 
 
 // Method to add a transaction and adjust balances
-walletSchema.methods.addTransaction = async function (amount, type, description, recipient = null, communityId = null) {
+walletSchema.methods.addTransaction = async function (amount, type, description, recipient = null, communityId = null, sUserId = null) {
+  if (!['deposit', 'withdrawal', 'contribution', 'penalty', 'transfer', 'payout', 'fixed'].includes(type)) {
+    throw new Error(`Invalid transaction type: ${type}`);
+  }
+
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No transactions allowed.');
   }
 
-  // Adjust balances based on transaction type
-  if (['withdrawal', 'transfer', 'penalty'].includes(type)) {
+  // Adjust balances
+  if (['withdrawal', 'transfer', 'penalty', 'contribution'].includes(type)) {
     if (this.availableBalance < amount) {
       throw new Error('Insufficient balance for the transaction.');
     }
     this.availableBalance -= amount;
-  } else if (['deposit', 'contribution', 'payout'].includes(type)) {
-    this.availableBalance += amount;
-  } else {
-    throw new Error(`Invalid transaction type: ${type}`);
+  } else if (['deposit', 'payout', 'fixed'].includes(type)) {
+    this.availableBalance += type === 'fixed' ? -amount : amount;
+    if (type === 'fixed') {
+      this.fixedBalance += amount;
+    }
   }
 
-  // Record the transaction
+  // Add new transaction
   this.transactions.push({
     amount,
     type,
     description,
     recipient,
     communityId,
+    sUserId,
   });
 
-  // Recalculate total balance
+  // Save wallet with selective validation
+  this.markModified('transactions'); // Ensure only the `transactions` array is validated
   this.totalBalance = this.availableBalance + this.fixedBalance;
-  await this.save();
 
-  console.log(`Transaction of type "${type}" for €${amount} recorded successfully.`);
+  // console.log('Wallet document before saving:', this);
+  await this.save();
 };
 
-// Method to withdraw funds
+
+
+// withdrawFunds Method
 walletSchema.methods.withdrawFunds = async function (amount) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No withdrawals allowed.');
   }
+
   if (this.availableBalance < amount) {
     throw new Error('Insufficient balance for withdrawal.');
   }
 
-  this.availableBalance -= amount;
-  this.totalBalance = this.availableBalance + this.fixedBalance;
-
-  this.transactions.push({
-    amount,
-    type: 'withdrawal',
-    description: 'Manual withdrawal',
-  });
-
-  await this.save();
-
-  // Update user notifications and activity log
-  const activityMessage = `Withdrawal of €${amount} processed successfully.`;
-  await updateUserActivity(this.userId, activityMessage);
+  // Use addTransaction for withdrawal
+  await this.addTransaction(amount, 'withdrawal', 'Manual withdrawal');
 };
 
-// Method to transfer funds
-walletSchema.methods.transferFunds = async function (amount, recipientWalletId) {
+// transferFunds Method
+walletSchema.methods.transferFunds = async function (amount, recipientWalletId, description = '') {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No transfers allowed.');
   }
+
   if (this.availableBalance < amount) {
     throw new Error('Insufficient balance for transfer.');
   }
 
-  this.availableBalance -= amount;
-  this.totalBalance = this.availableBalance + this.fixedBalance;
-
-  this.transactions.push({
+  // Deduct funds from sender's wallet
+  await this.addTransaction(
     amount,
-    type: 'transfer',
-    description: `Transfer to wallet ID ${recipientWalletId}`,
-    recipient: recipientWalletId,
-  });
+    'transfer',
+    description || `Transfer to Wallet ID ${recipientWalletId}`,
+    recipientWalletId
+  );
 
-  await this.save();
-
+  // Add funds to recipient's wallet
   const recipientWallet = await mongoose.model('Wallet').findById(recipientWalletId);
   if (!recipientWallet) {
     throw new Error('Recipient wallet not found.');
   }
 
-  recipientWallet.availableBalance += amount;
-  recipientWallet.totalBalance = recipientWallet.availableBalance + recipientWallet.fixedBalance;
-
-  recipientWallet.transactions.push({
+  await recipientWallet.addTransaction(
     amount,
-    type: 'deposit',
-    description: `Transfer from wallet ID ${this._id}`,
-    recipient: this.userId,
-  });
-
-  await recipientWallet.save();
-
-  // Update notifications for both sender and recipient
-  await updateUserActivity(this.userId, `Transfer of €${amount} sent to Wallet ID ${recipientWalletId}.`);
-  await updateUserActivity(recipientWallet.userId, `Transfer of €${amount} received from Wallet ID ${this._id}.`);
+    'deposit',
+    description || `Transfer from Wallet ID ${this._id}`,
+    this.userId
+  );
 };
 
-// Method to deduct penalties
+// deductPenalty Method
 walletSchema.methods.deductPenalty = async function (penaltyAmount) {
   if (this.isFrozen) {
     throw new Error('Wallet is frozen. No penalty deduction allowed.');
   }
+
   if (this.availableBalance < penaltyAmount) {
     throw new Error('Insufficient balance for penalty deduction.');
   }
 
-  this.availableBalance -= penaltyAmount;
-  this.transactions.push({
-    amount: penaltyAmount,
-    type: 'penalty',
-    description: 'Penalty deduction',
-  });
-
-  await this.save();
+  // Use addTransaction for penalty
+  await this.addTransaction(penaltyAmount, 'penalty', 'Penalty deduction');
 };
+
 
 
 // Method to check if fixed funds have matured
 fixedFundsSchema.methods.checkMaturity = function () {
   return this.isMatured || new Date() >= this.endDate;
 };
+
+// Method to add funds to the wallet
+walletSchema.methods.addFunds = async function (amount, description = 'Funds added') {
+  if (amount <= 0) {
+    throw new Error('Amount to be added must be greater than zero.');
+  }
+
+  // Use addTransaction for adding funds
+  await this.addTransaction(amount, 'deposit', description);
+
+  console.log(`Funds added successfully: €${amount}`);
+};
+
 
 
 // Indexing on userId for faster lookups

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Community = require('./models/Community');
-const User = require('./models/User');
+const User = require('./models/User')
+const Contribution = require('./models/Contribution'); // Import the Contribution model
 const communityController = require('./controllers/communityController');
 require('dotenv').config();
 
@@ -21,7 +22,7 @@ const joinCommunitySeeder = async () => {
         }
 
         // Fetch the community
-        const communityId = '677b1500cced4029227a5652'; // Replace with your community ID
+        const communityId = '679efa9f38f804183cf8ed0d'; // Replace with your community ID
         const community = await Community.findById(communityId);
         if (!community) {
             console.error('Community not found. Please create the community first.');
@@ -40,7 +41,7 @@ const joinCommunitySeeder = async () => {
         for (const user of usersToJoin) {
             const req = {
                 params: { communityId },
-                body: { userId: user._id, name: user.name, email: user.email },
+                body: { userId: user._id, name: user.name, email: user.email, contributionAmount: 550, communityId: communityId},
             };
             const res = {
                 status: (statusCode) => ({

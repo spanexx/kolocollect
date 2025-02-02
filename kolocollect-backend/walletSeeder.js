@@ -22,7 +22,7 @@ const seedWallets = async () => {
       const req = {
         body: {
           userId: wallet.userId,
-          amount: 1000,
+          amount: 10000,
         },
       };
 
