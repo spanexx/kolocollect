@@ -39,6 +39,10 @@ router.get('/:communityId/midcycle-contributions', communityController.getMidCyc
 
 router.get('/payout/:communityId', communityController.getPayoutInfo);
 
+// Route to pay penalty and missed contributions
+router.post('/:communityId/members/:userId/payPenaltyAndMissedContribution', communityController.payPenaltyAndMissedContribution);
 
+// Route to skip contribution and mark mid-cycle as ready
+router.post('/:communityId/midCycles/:midCycleId/skipContributionAndMarkReady', communityController.skipContributionAndMarkReady);
 
 module.exports = router;

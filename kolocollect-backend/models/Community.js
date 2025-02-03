@@ -245,6 +245,9 @@ CommunitySchema.methods.handleWalletForDefaulters = async function (userId, acti
     try {
         const member = this.members.find(m => m.userId.equals(userId));
         if (!member) throw new Error('Member not found.');
+        if (!this.admin.equals(currentUser._id)) {
+            throw new AuthorizationError('NOT_AUTHORIZED', 'Only community admin can perform wallet operations');
+        }
 
         const wallet = await mongoose.model('Wallet').findOne({ userId });
         if (!wallet) throw new Error('Wallet not found.');
@@ -810,7 +813,6 @@ CommunitySchema.methods.validateMidCycleAndContributions = async function () {
     }
 };
 
-
 // Distribute payouts to the next in line
 CommunitySchema.methods.distributePayouts = async function () {
     try {
@@ -828,10 +830,15 @@ CommunitySchema.methods.distributePayouts = async function () {
         }
 
         // Use the payout amount from the mid-cycle
-        const payoutAmount = activeMidCycle.payoutAmount;
+        let payoutAmount = activeMidCycle.payoutAmount;
         if (payoutAmount <= 0) {
             throw new Error('Invalid payout amount.');
         }
+
+        // Deduct the recipient's penalty from the payout amount
+        const penalty = this.getMemberPenalty(nextRecipientId);
+        payoutAmount -= penalty;
+        this.backupFund += penalty;
 
         // Transfer funds to the recipient's wallet
         const Wallet = mongoose.model('Wallet');
@@ -895,6 +902,7 @@ CommunitySchema.methods.distributePayouts = async function () {
         throw err;
     }
 };
+
 
 
 CommunitySchema.methods.reactivateMember = async function (userId, contributionAmount) {
@@ -1433,6 +1441,82 @@ CommunitySchema.methods.startPayoutMonitor = function () {
     }, checkInterval);
 };
 
+CommunitySchema.methods.payPenaltyAndMissedContribution = async function (userId, amount) {
+    try {
+        // Find the member by userId
+        const member = this.members.find(m => m.userId.equals(userId));
+        if (!member) throw new Error('Member not found.');
+
+        // Calculate the total penalty based on missed contributions
+        const totalPenalty = this.settings.penalty * member.missedContributions.length;
+
+        // Initialize the total amount due with the total penalty
+        let totalAmountDue = totalPenalty;
+
+        // Check if the user has received a payout in any cycle
+        if (this.cycles.some((cycle) => cycle.paidMembers.includes(userId))) {
+            // Find all mid-cycles where the user was the next in line
+            const defaulterMidCycles = this.midCycle.filter(midCycle => 
+                midCycle.nextInLine.userId.equals(userId)
+            );
+
+            // Calculate the total amount owed based on contributions from next in line
+            defaulterMidCycles.forEach(midCycle => {
+                const nextInLineContribution = midCycle.contributors.get(userId.toString());
+                if (nextInLineContribution) {
+                    totalAmountDue += nextInLineContribution.reduce((sum, contributionId) => {
+                        const contribution = this.contributions.id(contributionId);
+                        return sum + (contribution ? contribution.amount : 0);
+                    }, 0);
+                }
+            });
+        } else {
+            // If no payout received, add the minimum contribution to the total amount due
+            totalAmountDue += this.settings.minContribution;
+        }
+
+        // Check if the provided amount is sufficient to cover the total amount due
+        if (amount < totalAmountDue) {
+            throw new Error(`Insufficient amount. You must pay at least €${totalAmountDue.toFixed(2)}.`);
+        }
+
+        // Update the backup fund and reset member's penalty and missed contributions
+        this.backupFund += totalPenalty;
+        member.penalty = 0;
+        member.missedContributions = [];
+
+        // Save the updated community state
+        await this.save();
+        return { message: 'Penalty and missed contributions paid successfully.' };
+    } catch (err) {
+        console.error('Error in payPenaltyAndMissedContribution:', err);
+        throw err;
+    }
+};
+
+CommunitySchema.methods.skipContributionAndMarkReady = async function (midCycleId, userIds = []) {
+    try {
+        const midCycle = this.midCycle.find(mc => mc._id.equals(midCycleId));
+        if (!midCycle) throw new Error('MidCycle not found.');
+
+        const activeMembers = this.members.filter(m => m.status === 'active');
+        const allContributed = activeMembers.every(member =>
+            userIds.includes(member.userId.toString()) || midCycle.contributors.has(member.userId.toString())
+        );
+
+        if (allContributed) {
+            midCycle.isReady = true;
+            await this.save();
+            return { message: 'Mid-cycle marked as ready.' };
+        } else {
+            return { message: 'Not all active members have contributed.' };
+        }
+    } catch (err) {
+        console.error('Error in skipContributionAndMarkReady:', err);
+        throw err;
+    }
+};
+
 CommunitySchema.statics.filterCommunity = function (criteria) {
     return this.model('Community').find(criteria);
 };
@@ -1445,5 +1529,11 @@ CommunitySchema.statics.searchCommunity = function (keyword) {
 
 // Ensure text indexes are created on the name and description fields
 CommunitySchema.index({ name: 'text', description: 'text' });
+
+CommunitySchema.methods.getMemberPenalty = function (userId) {
+    const member = this.members.find(m => m.userId.equals(userId));
+    if (!member) throw new Error('Member not found.');
+    return member.penalty;
+};
 
 module.exports = mongoose.model('Community', CommunitySchema);

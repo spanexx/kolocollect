@@ -548,3 +548,39 @@ exports.filterCommunity = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// Pay penalty and missed contributions
+exports.payPenaltyAndMissedContribution = async (req, res) => {
+  try {
+    const { communityId, userId } = req.params;
+    const { amount } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    const result = await community.payPenaltyAndMissedContribution(userId, amount);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error paying penalty and missed contributions:', err);
+    res.status(500).json({ message: 'Error paying penalty and missed contributions', error: err.message });
+  }
+};
+
+// Skip contribution and mark mid-cycle as ready
+exports.skipContributionAndMarkReady = async (req, res) => {
+  try {
+    const { communityId, midCycleId } = req.params;
+    const { userId } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    const result = await community.skipContributionAndMarkReady(midCycleId, userId);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error skipping contribution and marking mid-cycle as ready:', err);
+    res.status(500).json({ message: 'Error skipping contribution and marking mid-cycle as ready', error: err.message });
+  }
+};
